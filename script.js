@@ -339,9 +339,9 @@ loadData().then(d=>{
     $('#hello').textContent="Couldn't load data";
     const p=document.createElement('p');p.className='empty';
     p.textContent='Open the app from a web server (Live Server) and make sure data.json is in the data folder (or next to index.html).';
-    $('#notifs').replaceChildren(p);return;
+    $('#notifs').replaceChildren(p);document.documentElement.classList.add('ready');return;
   }
-  D=d;setTheme();renderHome();show('home');if(!S.name||!S.group||!S.section)onboard();
+  D=d;setTheme();renderHome();show('home');document.documentElement.classList.add('ready');if(!S.name||!S.group||!S.section)onboard();
 });
 
 /* offline support: service-worker.js keeps the app on the phone; when a new version is uploaded the page reloads once */

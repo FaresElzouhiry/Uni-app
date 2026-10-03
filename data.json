@@ -67,7 +67,20 @@
    {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "19": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+   {"course": "Safety and Risk Management", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B9-Theater", "staff": "Dr. Ahmed Hamed"},
+   {"course": "Physics (1)", "title": "Tutorial", "day": 1, "start": "12:30", "end": "14:10", "room": "B9-F1-14", "staff": "Dr. Nada Ragab"},
+   {"course": "Mechanics", "title": "Tutorial", "day": 1, "start": "14:15", "end": "15:55", "room": "B9-F1-14", "staff": ""},
+   {"course": "Physics Lab (1) / Chemistry Lab (1)", "title": "Lab", "day": 2, "start": "09:00", "end": "12:25", "room": "COE", "staff": ""},
+   {"course": "Engineering Drawing", "title": "Lecture", "day": 2, "start": "12:30", "end": "13:20", "room": "Red Hall", "staff": "Prof. Mohamed Nassef"},
+   {"course": "Engineering Drawing", "title": "Lab", "day": 2, "start": "13:20", "end": "15:55", "room": "COE", "staff": "Dr. Ibrahim Maher"},
+   {"course": "Mechanics", "title": "Lecture", "day": 3, "start": "09:00", "end": "10:40", "room": "Red Hall", "staff": "Dr. Ahmed Askr"},
+   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "Red Hall", "staff": "Dr. Sayed Soliman"},
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "12:30", "end": "14:10", "room": "B8-F1-10", "staff": ""},
+   {"course": "Fundamentals of Communication", "title": "Lecture", "day": 4, "start": "09:00", "end": "09:50", "room": "B8-G-41", "staff": "Dr. Amal Gomaa"},
+   {"course": "Fundamentals of Communication", "title": "Tutorial", "day": 4, "start": "09:50", "end": "11:35", "room": "B8-F1-10", "staff": "Mr. Mohamed El-nomerossie"},
+   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "11:35", "end": "12:25", "room": "B8-G-41", "staff": "Dr. Naglaa"},
+   {"course": "Mathematics (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "B8-G-41", "staff": "Prof. Waheed Zahra"},
+   {"course": "Japanese Language 1", "title": "Tutorial", "day": 4, "start": "14:15", "end": "15:55", "room": "B18-F1-10", "staff": ""}
   ],
   "20": [
    {"course": "Safety and Risk Management", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B9-Theater", "staff": "Dr. Ahmed Hamed"},
@@ -86,7 +99,20 @@
    {"course": "Japanese Language 1", "title": "Tutorial", "day": 4, "start": "14:15", "end": "15:55", "room": "B18-F1-10", "staff": ""}
   ],
   "21": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+   {"course": "Safety and Risk Management", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B9-Theater", "staff": "Dr. Ahmed Hamed"},
+   {"course": "Physics (1)", "title": "Tutorial", "day": 1, "start": "12:30", "end": "14:10", "room": "B9-F1-14", "staff": "Dr. Nada Ragab"},
+   {"course": "Mechanics", "title": "Tutorial", "day": 1, "start": "14:15", "end": "15:55", "room": "B9-F1-14", "staff": ""},
+   {"course": "Physics Lab (1) / Chemistry Lab (1)", "title": "Lab", "day": 2, "start": "09:00", "end": "12:25", "room": "COE", "staff": ""},
+   {"course": "Engineering Drawing", "title": "Lecture", "day": 2, "start": "12:30", "end": "13:20", "room": "Red Hall", "staff": "Prof. Mohamed Nassef"},
+   {"course": "Engineering Drawing", "title": "Lab", "day": 2, "start": "13:20", "end": "15:55", "room": "COE", "staff": "Dr. Ibrahim Maher"},
+   {"course": "Mechanics", "title": "Lecture", "day": 3, "start": "09:00", "end": "10:40", "room": "Red Hall", "staff": "Dr. Ahmed Askr"},
+   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "Red Hall", "staff": "Dr. Sayed Soliman"},
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "12:30", "end": "14:10", "room": "B8-F1-10", "staff": ""},
+   {"course": "Fundamentals of Communication", "title": "Lecture", "day": 4, "start": "09:00", "end": "09:50", "room": "B8-G-41", "staff": "Dr. Amal Gomaa"},
+   {"course": "Fundamentals of Communication", "title": "Tutorial", "day": 4, "start": "09:50", "end": "11:35", "room": "B8-F1-10", "staff": "Mr. Mohamed El-nomerossie"},
+   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "11:35", "end": "12:25", "room": "B8-G-41", "staff": "Dr. Naglaa"},
+   {"course": "Mathematics (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "B8-G-41", "staff": "Prof. Waheed Zahra"},
+   {"course": "Japanese Language 1", "title": "Tutorial", "day": 4, "start": "14:15", "end": "15:55", "room": "B18-F1-10", "staff": ""}
   ],
   "22": [
    {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
@@ -100,4 +126,4 @@
  },
  "exams": [],
  "notifications": []
-} 
+}

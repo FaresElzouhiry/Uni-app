@@ -15,8 +15,18 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Uni Hub">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<script data-goatcounter="https://faresahmed.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
+<style>
+/* smooth start: the screen is black (or white in the White theme) from the first paint; the app fades in when it is ready */
+html{background:#0a0a0a;color-scheme:dark}
+html[data-theme=light]{background:#fff;color-scheme:light}
+html:not(.ready) #app{opacity:0}
+#app{transition:opacity .3s ease}
+@media(max-width:480px){html body{background:#0a0a0a!important}html[data-theme=light] body{background:#fff!important}}
+</style>
+<script>
+try{if(JSON.parse(localStorage.getItem('st')).theme==='light'){document.documentElement.dataset.theme='light';document.querySelector('meta[name=theme-color]').content='#ffffff'}}catch(e){}
+setTimeout(function(){document.documentElement.classList.add('ready')},4000);   // safety: never stay black
+</script>
 </head>
 <body>
 <div id="app">
