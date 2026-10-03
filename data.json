@@ -12,7 +12,6 @@
   "LRA-111": {"name": "Japanese Language 1", "color": "#94a3b8"}
  },
  "schedules": {
-  {
   "sections": {
     "1": [
       {
@@ -1256,8 +1255,7 @@
         "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
       }
     ]
-  }
-}
+  },
   "19": [
    {"course": "Safety and Risk Management", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B9-Theater", "staff": "Dr. Ahmed Hamed"},
    {"course": "Physics (1)", "title": "Tutorial", "day": 1, "start": "12:30", "end": "14:10", "room": "B9-F1-14", "staff": "Dr. Nada Ragab"},
