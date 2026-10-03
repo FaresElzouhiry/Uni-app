@@ -13,36 +13,63 @@
  },
  "schedules": {
   "1": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "2": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "3": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "4": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "5": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "6": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ],
   "7": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "8": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "9": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "10": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "11": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "12": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "13": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "14": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "15": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "16": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "17": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "18": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "19": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "20": [
    {"course": "Safety and Risk Management", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B9-Theater", "staff": "Dr. Ahmed Hamed"},
    {"course": "Physics (1)", "title": "Tutorial", "day": 1, "start": "12:30", "end": "14:10", "room": "B9-F1-14", "staff": "Dr. Nada Ragab"},
    {"course": "Mechanics", "title": "Tutorial", "day": 1, "start": "14:15", "end": "15:55", "room": "B9-F1-14", "staff": ""},
@@ -58,18 +85,19 @@
    {"course": "Mathematics (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "B8-G-41", "staff": "Prof. Waheed Zahra"},
    {"course": "Japanese Language 1", "title": "Tutorial", "day": 4, "start": "14:15", "end": "15:55", "room": "B18-F1-10", "staff": ""}
   ],
-  "8": [
-   {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 3, "start": "10:45", "end": "12:25", "room": "TBA", "staff": ""},
-   {"course": "Chemistry (1)", "title": "Lecture", "day": 4, "start": "12:30", "end": "14:10", "room": "TBA", "staff": ""}
+  "21": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "22": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "23": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
+  ],
+  "24": [
+   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
   ]
  },
- "exams": [
-  {"course": "CHEMp102", "title": "Lab quiz", "date": "2026-10-06", "time": "10:00", "room": "Lab 2"},
-  {"course": "MATH103", "title": "Midterm", "date": "2026-10-14", "time": "09:00", "room": "Hall H2"},
-  {"course": "PHYS102", "title": "Quiz 2", "date": "2026-10-20", "time": "10:00", "room": "C3.105"},
-  {"course": "CSEN202", "title": "Midterm", "date": "2026-10-27", "time": "12:00", "room": "Hall H3"},
-  {"course": "ENGL102", "title": "Essay test", "date": "2026-11-03", "time": "12:00", "room": "B3.204"}
- ],
+ "exams": [],
  "notifications": []
-}
+} 

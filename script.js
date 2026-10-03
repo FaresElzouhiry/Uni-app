@@ -15,7 +15,7 @@ const app=$('#app'),menu=$('#menu'),scrim=$('#scrim');
 let D,view='home',sel=new Date(),base,S=fresh();
 try{Object.assign(S,JSON.parse(localStorage.getItem('st')))}catch(e){}
 const save=()=>{try{localStorage.setItem('st',JSON.stringify(S))}catch(e){}};
-const setTheme=()=>document.documentElement.dataset.theme=S.theme||'dark';
+const setTheme=()=>{const t=S.theme||'dark';document.documentElement.dataset.theme=t;const m=document.querySelector('meta[name=theme-color]');if(m)m.content=t==='light'?'#ffffff':'#0a0a0a'}; // the phone's status bar follows the app background
 const col=c=>/^[0-9a-f]{3,8}$/i.test(c||'')?'#'+c:(c||GREY);
 function info(label){
   const keys=String(label).split('/').map(p=>p.trim().toLowerCase()).map(p=>Object.keys(D.courses).find(k=>k.toLowerCase()===p||(D.courses[k].name||'').toLowerCase()===p));
@@ -23,8 +23,8 @@ function info(label){
   const cs=keys.map(k=>col(D.courses[k].color));
   return{label:keys.join(' / '),name:keys.map(k=>D.courses[k].name).join(' / '),colors:[cs[0],cs[1]||cs[0]]};
 }
-/* the schedule in data/data.json is per group: "schedules": {"7":[...]} */
-const sched=()=>(D.schedules||{})[S.group]||[];
+/* the schedule in data.json is per SECTION (1–24): "schedules": {"20":[...]}. Group g owns sections 3g-2 … 3g, e.g. group 7 → 19, 20, 21 */
+const sched=()=>(D.schedules||{})[S.section]||[];
 const eventsOn=d=>[...sched().filter(e=>e.day===d.getDay()),...S.mine.filter(e=>e.date===iso(d))].sort((a,b)=>mins(a.start)-mins(b.start));
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.id);toast.id=setTimeout(()=>t.classList.remove('show'),2600)}
 
@@ -80,8 +80,9 @@ function settings(){
   $('#pl').replaceChildren(
     item({ic:'✏️',t:'Name',s:S.name,btn:'Edit',fn:()=>ask('Your name',[{label:'Name',val:S.name}]).then(r=>{if(r&&r[0].trim()){S.name=r[0].trim();save();renderHome();settings()}})}),
     item({ic:'👥',t:'Group',s:`Group ${S.group} · locked, it can't be changed`}),
+    item({ic:'🎓',t:'Section',s:`Section ${S.section} · locked, it can't be changed`}),
     item({ic:'🌓',t:'Theme',s:S.theme==='light'?'White':'Black',btn:'Switch',fn:()=>{S.theme=S.theme==='light'?'dark':'light';save();setTheme();settings()}}),
-    item({ic:'🗑',t:'Reset saved data',s:'Events, read notifications and tasks (name and group stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
+    item({ic:'🗑',t:'Reset saved data',s:'Events, read notifications and tasks (name, group and section stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,section:S.section,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
 }
 
 function show(v){
@@ -103,7 +104,7 @@ function notifs(){
   const u=n.length-S.seen.length;$('#readall').textContent=u?`Read All (${u})`:'All read';
 }
 function renderHome(){
-  $('#hello').textContent=S.name?`Hello, ${S.name}!`:'Hello!';$('#who').textContent=S.name?`${S.name} · Group ${S.group||'–'}`:'';
+  $('#hello').textContent=S.name?`Hello, ${S.name}!`:'Hello!';$('#who').textContent=S.name?`${S.name} · Group ${S.group||'–'} · Section ${S.section||'–'}`:'';
   const n=new Date(),s0=new Date(n.getFullYear(),n.getMonth(),n.getDate()-(n.getDay()+1)%7),s1=new Date(s0);
   s1.setDate(s0.getDate()+7);
   const c=D.exams.filter(e=>{const d=new Date(e.date+'T00:00');return d>=s0&&d<s1}).length;
@@ -280,15 +281,22 @@ elastic($('main'),()=>$('main .view:not([hidden])'),e=>!e.target.closest('#notif
 elastic($('#notifs'),()=>$('#notifs'));
 elastic($('.tlw'),()=>$('#tl'));
 
-async function onboard(name='',grp=''){
-  const r=await ask('Welcome 👋',[{label:'Your name',val:name},{label:'Your group (1–8)',type:'chips',opts:[1,2,3,4,5,6,7,8],val:grp}],"Pick your group carefully — you won't be able to change it later.",true);
-  const n=r[0].trim(),g=r[1];
-  if(!n||!/^[1-8]$/.test(g)){toast('Enter your name and choose a group');return onboard(n,g)}
-  if(!await ask(`Lock in Group ${g}?`,[],"You won't be able to change your group again."))return onboard(n,g);
-  S.name=n;S.group=+g;save();renderHome();show('home');toast(`Welcome, ${n}!`);
+const secsOf=g=>[1,2,3].map(i=>(g-1)*3+i);   // group g → its 3 sections (group 7 → 19, 20, 21)
+async function onboard(name=S.name||'',grp=S.group||'',sec=''){
+  if(!S.name||!S.group){                      // step 1: name + group (skipped when the group is already locked in)
+    const r=await ask('Welcome 👋',[{label:'Your name',val:name},{label:'Your group (1–8)',type:'chips',opts:[1,2,3,4,5,6,7,8],val:grp}],"Pick your group carefully — you won't be able to change it later.",true);
+    name=r[0].trim();grp=r[1];
+    if(!name||!/^[1-8]$/.test(grp)){toast('Enter your name and choose a group');return onboard(name,grp,sec)}
+  }
+  const g=+grp,opts=secsOf(g);                // step 2: your tutorial section inside that group
+  const r2=await ask('Your section',[{label:`Group ${g} · choose your section`,type:'chips',opts,val:opts.includes(+sec)?sec:''}],"Pick your tutorial section carefully — you won't be able to change it later.",true);
+  const s=+r2[0];
+  if(!opts.includes(s)){toast('Choose your section');return onboard(name,grp,sec)}
+  if(!await ask(`Lock in Group ${g} · Section ${s}?`,[],"You won't be able to change them again."))return onboard(name,grp,s);
+  S.name=name;S.group=g;S.section=s;save();renderHome();show('home');toast(`Welcome, ${name}!`);
 }
 /* data: data.json (data/data.json or next to index.html) is the only source. Every successful load is cached in localStorage; the cache is used when offline. */
-const DATA_KEY='portal:data';
+const DATA_KEY='portal:data2';               // (new key: the old cached data was per group, this one is per section)
 const valid=d=>d&&d.courses&&d.schedules&&['exams','notifications'].every(k=>Array.isArray(d[k]));
 async function loadData(){
   try{
@@ -310,12 +318,12 @@ loadData().then(d=>{
     p.textContent='Open the app from a web server (Live Server) and make sure data.json is in the data folder (or next to index.html).';
     $('#notifs').replaceChildren(p);return;
   }
-  D=d;setTheme();renderHome();show('home');if(!S.name||!S.group)onboard();
+  D=d;setTheme();renderHome();show('home');if(!S.name||!S.group||!S.section)onboard();
 });
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js')
-      .then((reg) => console.log('Service Worker registered:', reg.scope))
-      .catch((err) => console.log('Service Worker failed:', err));
-  });
+
+/* offline support: service-worker.js keeps the app on the phone; when a new version is uploaded the page reloads once */
+if('serviceWorker' in navigator){
+  const had=!!navigator.serviceWorker.controller;let reloading=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!reloading){reloading=true;location.reload()}});
+  addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
 }
