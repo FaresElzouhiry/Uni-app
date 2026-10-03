@@ -12,60 +12,1252 @@
   "LRA-111": {"name": "Japanese Language 1", "color": "#94a3b8"}
  },
  "schedules": {
-  "1": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "2": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "3": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "4": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "5": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "6": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "7": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "8": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "9": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "10": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "11": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "12": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "13": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "14": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "15": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "16": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 1, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "17": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
-  "18": [
-   {"course": "Mathematics (1)", "title": "Tutorial", "day": 3, "start": "09:00", "end": "10:40", "room": "TBA", "staff": ""}
-  ],
+  {
+  "sections": {
+    "1": [
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 7,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 7,
+        "start": "09:50",
+        "end": "12:25",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 7,
+        "start": "12:30",
+        "end": "15:55",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "B8-G-41",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "B8-G-41",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B9-F1-04",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "",
+        "staff": ""
+      }
+    ],
+    "2": [
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 7,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 7,
+        "start": "09:50",
+        "end": "12:25",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 7,
+        "start": "12:30",
+        "end": "15:55",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "B8-G-41",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "13:20",
+        "end": "15:05",
+        "room": "B9-F1-05",
+        "staff": "Mr. Mohamed El-sanhoury"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B9-F1-05",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "",
+        "staff": ""
+      }
+    ],
+    "3": [
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 7,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 7,
+        "start": "09:50",
+        "end": "12:25",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 7,
+        "start": "12:30",
+        "end": "15:55",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "B8-G-41",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "13:20",
+        "end": "15:05",
+        "room": "B9-F1-04",
+        "staff": "Ms. Mayar Hashim"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "",
+        "staff": ""
+      }
+    ],
+    "4": [
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 7,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-F1-07",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 7,
+        "start": "09:50",
+        "end": "12:25",
+        "room": "Red Hall",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 7,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 7,
+        "start": "13:20",
+        "end": "15:55",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "B8-G-41",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 1,
+        "start": "13:20",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B17-F1-08",
+        "staff": "Ms. Doaa Harhash"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      }
+    ],
+    "5": [
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 7,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-F1-10",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 7,
+        "start": "09:50",
+        "end": "12:25",
+        "room": "Red Hall",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 7,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 7,
+        "start": "13:20",
+        "end": "15:55",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "B8-G-41",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 1,
+        "start": "13:20",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B17-F1-09",
+        "staff": "Ms. Yasmine Ahmed"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      }
+    ],
+    "6": [
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 7,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-F1-11",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 7,
+        "start": "09:50",
+        "end": "12:25",
+        "room": "Red Hall",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 7,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 7,
+        "start": "13:20",
+        "end": "15:55",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "B8-G-41",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 1,
+        "start": "13:20",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B17-F1-13",
+        "staff": "Mr. Mohamed El-nomerossie"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      }
+    ],
+    "7": [
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 7,
+        "start": "09:00",
+        "end": "12:25",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 7,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-F1-06",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 7,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B8-F1-07",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "Red Hall",
+        "staff": "Dr. Ahmed Askr"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 1,
+        "start": "13:20",
+        "end": "15:55",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-F1-06",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "B9-G-35",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "13:20",
+        "end": "14:10",
+        "room": "B9-F1-13",
+        "staff": "Mr. Mohamed El-sanhoury"
+      }
+    ],
+    "8": [
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 7,
+        "start": "09:00",
+        "end": "12:25",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 7,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-F1-06",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 7,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B8-F1-10",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "Red Hall",
+        "staff": "Dr. Ahmed Askr"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 1,
+        "start": "13:20",
+        "end": "15:55",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-G-41",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "B9-G-35",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "13:20",
+        "end": "14:10",
+        "room": "B9-F1-14",
+        "staff": "Ms. Yasmine Ahmed"
+      }
+    ],
+    "9": [
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 7,
+        "start": "09:00",
+        "end": "12:25",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 7,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-F1-06",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 7,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B8-F1-11",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Lecture",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "Red Hall",
+        "staff": "Dr. Ahmed Askr"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 1,
+        "start": "13:20",
+        "end": "15:55",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B9-G-35",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "B9-G-35",
+        "staff": "Dr. Amal Gomaa"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "13:20",
+        "end": "14:10",
+        "room": "B9-F1-22",
+        "staff": "Ms. Doaa Harhash"
+      }
+    ],
+    "10": [
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B9-F1-13",
+        "staff": ""
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-F1-13",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-Theater",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "14:15",
+        "end": "15:55",
+        "room": "",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "13:20",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Askr"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:55",
+        "room": "B9-F1-13",
+        "staff": "Mr. Mohamed El-sanhoury"
+      }
+    ],
+    "11": [
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B9-F1-14",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-F1-14",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-Theater",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "14:15",
+        "end": "15:55",
+        "room": "",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Askr"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:55",
+        "room": "B9-F1-14",
+        "staff": "Ms. Yasmine Ahmed"
+      }
+    ],
+    "12": [
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B9-F1-22",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B9-F1-22",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Lecture",
+        "day": 1,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-Theater",
+        "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "14:15",
+        "end": "15:55",
+        "room": "",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      },
+      {
+        "course": "Mechanics",
+        "title": "Lecture",
+        "day": 2,
+        "start": "12:30",
+        "end": "14:10",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Askr"
+      },
+      {
+        "course": "Fundamentals of Communication",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:55",
+        "room": "B9-F1-22",
+        "staff": "Mr. Mohamed El-nomerossie"
+      }
+    ],
+    "13": [
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-F1-07",
+        "staff": ""
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      }
+    ],
+    "14": [
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B8-F1-10",
+        "staff": ""
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      }
+    ],
+    "15": [
+      {
+        "course": "Engineering Drawing",
+        "title": "Lecture",
+        "day": 1,
+        "start": "09:00",
+        "end": "10:40",
+        "room": "Red Hall",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Engineering Drawing",
+        "title": "Lab",
+        "day": 1,
+        "start": "10:45",
+        "end": "12:25",
+        "room": "TBD",
+        "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Lecture",
+        "day": 2,
+        "start": "10:45",
+        "end": "14:10",
+        "room": "B8-G-41",
+        "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B9-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      }
+    ],
+    "16": [
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 1,
+        "start": "09:00",
+        "end": "12:25",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "12:30",
+        "end": "15:05",
+        "room": "B8-F1-07",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B17-F1-08",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "10:45",
+        "end": "14:10",
+        "room": "B17-F1-08",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      }
+    ],
+    "17": [
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 1,
+        "start": "09:00",
+        "end": "12:25",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "09:00",
+        "end": "09:50",
+        "room": "B17-F1-09",
+        "staff": ""
+      },
+      {
+        "course": "Physics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "10:45",
+        "end": "14:10",
+        "room": "B17-F1-09",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      }
+    ],
+    "18": [
+      {
+        "course": "Physics Lab (1) / Chemistry Lab (1)",
+        "title": "Lab",
+        "day": 1,
+        "start": "09:00",
+        "end": "12:25",
+        "room": "COE",
+        "staff": ""
+      },
+      {
+        "course": "Mechanics",
+        "title": "Tutorial",
+        "day": 1,
+        "start": "12:30",
+        "end": "15:05",
+        "room": "B8-F1-10",
+        "staff": ""
+      },
+      {
+        "course": "Mathematics (1)",
+        "title": "Tutorial",
+        "day": 2,
+        "start": "10:45",
+        "end": "14:10",
+        "room": "B17-F1-13",
+        "staff": ""
+      },
+      {
+        "course": "Safety and Risk Management",
+        "title": "Lecture",
+        "day": 2,
+        "start": "14:15",
+        "end": "15:05",
+        "room": "B8-Theater",
+        "staff": "Dr. Ahmed Hamed and Dr. Mohamed Elwakeil"
+      }
+    ]
+  }
+}
   "19": [
    {"course": "Safety and Risk Management", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B9-Theater", "staff": "Dr. Ahmed Hamed"},
    {"course": "Physics (1)", "title": "Tutorial", "day": 1, "start": "12:30", "end": "14:10", "room": "B9-F1-14", "staff": "Dr. Nada Ragab"},
