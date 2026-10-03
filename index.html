@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!-- Student Portal — works with the files all in ONE folder (index.html, style.css, script.js, data.json) or split into css/, js/, data/ folders. Open index.html with Live Server. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" onerror="this.onerror=null;this.href='style.css'">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e63946">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Uni Hub">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div id="app">
+  <aside id="menu">
+    <div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21c0-5 3.5-7 8.5-7s8.5 2 8.5 7z"/></svg></div>
+    <p id="who" class="who"></p>
+    <nav>
+      <button data-view="home" class="on">Home</button>
+      <button data-view="grades">Grades</button>
+      <button data-view="schedule">Schedule</button>
+      <button data-view="attendance">Attendance</button>
+      <button data-view="staff">Contact Staff</button>
+      <button data-view="transcript">Transcript</button>
+      <button data-view="evaluate">Evaluate</button>
+    </nav>
+    <button class="cms" data-view="sis">SIS</button>
+    <div class="foot">
+      <button data-view="settings">Settings</button>
+      <button data-view="dev">About</button>
+    </div>
+  </aside>
+  <div id="scrim"></div>
+
+  <main>
+    <header class="top">
+      <button id="burger" class="burger" aria-label="Menu"><i></i><i></i></button>
+      <h1 id="title">Portal</h1>
+      <div id="act" class="act" hidden>
+        <button id="today" class="sq"><span>Today</span></button>
+        <button id="add" class="sq" aria-label="Add event"><span>Add Event</span></button>
+      </div>
+    </header>
+
+    <section id="home" class="view">
+      <p id="hello" class="hello"></p>
+      <div class="quick">
+        <button data-view="tasks"><span class="ic w"><svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true"><rect x="4" y="4" width="32" height="32" rx="9" fill="none" stroke="#111" stroke-width="3.5"/><path d="M12 21l6 6 11-13" fill="none" stroke="#e5202e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Tasks</button>
+        <button data-view="others"><span class="ic g">🗓</span>Other Schedules</button>
+      </div>
+      <div class="row">
+        <button class="exams" data-view="others"><small>this week</small><b id="exn">0</b><span id="exl">exams</span></button>
+        <button class="next" data-view="schedule"><small id="nx1"></small><strong id="nx2"></strong><small id="nx3"></small></button>
+      </div>
+      <div class="hd"><h2>Notifications</h2><button id="readall" class="pillo">Read All</button></div>
+      <div id="notifs" class="list"></div>
+    </section>
+
+    <section id="schedule" class="view" hidden>
+      <div id="wk" class="wk"></div>
+      <p id="nosch" class="empty" hidden>The schedule for your group isn't available yet.</p>
+      <div id="tlw" class="tlw"><div id="tl" class="tl"></div></div>
+    </section>
+
+    <section id="page" class="view" hidden><div id="pl" class="list"></div></section>
+
+    <section id="dev" class="view" hidden>
+      <div class="intro">
+        <h3>Hi, I'm Fares 👋</h3>
+        <p>I'm a first-year Computer Engineering student at E-JUST. I have some coding skills, so I decided to build this app, hoping it helps anyone who needs it. I'll keep improving it over time.</p>
+        <p>If you've run into any problem, or you have an idea to make it better, feel free to contact me.</p>
+      </div>
+      <a class="igcard" href="https://instagram.com/faress_ae" target="_blank" rel="noopener">
+        <span class="igic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r=".9" fill="currentColor"/></svg></span>
+        <small>Instagram</small>
+        <b>@faress_ae</b>
+        <span class="go">Open profile ↗</span>
+      </a>
+      <div class="fb">
+        <h3>Rate the app</h3>
+        <div id="stars" class="stars" role="group" aria-label="Rating"></div>
+        <p id="frate"></p>
+        <textarea id="fbtxt" rows="3" placeholder="What do you like? What should be better?"></textarea>
+        <button id="fbsend" class="cta">Send feedback</button>
+      </div>
+    </section>
+
+    <section id="wip" class="view" hidden><p>Still under development</p></section>
+  </main>
+  <div id="toast" role="status"></div>
+</div>
+
+<dialog id="dlg"><form method="dialog"></form></dialog>
+
+<!-- Templates: cloned by js/script.js and filled from data/data.json -->
+<template id="t-notif"><article class="n"><span class="bell">🔔</span><div><b data-f="title"></b><small><span data-f="course"></span><br><span data-f="staff"></span></small></div><time data-f="ago"></time></article></template>
+<template id="t-item"><article class="n"><span class="bell" data-f="ic"></span><div><b data-f="t"></b><small data-f="s"></small></div><time data-f="r"></time><button class="pill" data-f="btn"></button></article></template>
+<template id="t-day"><button><span data-f="dow"></span><b data-f="num"></b></button></template>
+<template id="t-event"><article class="ev"><b data-f="course"></b><small class="tm"><span data-f="time"></span><em data-f="title"></em></small><small class="rm" data-f="room"></small></article></template>
+
+<script src="js/script.js" onerror="var s=document.createElement('script');s.src='script.js';document.body.appendChild(s)"></script>
+</body>
+</html>
