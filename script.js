@@ -5,8 +5,8 @@ const iso=d=>d.toLocaleDateString('sv');
 const mins=t=>{const[h,m]=t.split(':');return h*60+ +m};
 const clock=t=>{const[h,m]=t.split(':');return (h%12||12)+':'+m+(h<12?' AM':' PM')};
 const p2=n=>String(n).padStart(2,'0');
-const HOUR0=9,SHOW_END=17,END_H=22,W0=26;    // timeline runs 9 AM → 10 PM; the screen fits 9 AM → 5 PM, later hours need a scroll
-let PH=60;                                   // pixels per hour — recalculated in renderTimeline() so 9 AM–5 PM always fits the screen
+const HOUR0=8,SHOW_END=17,END_H=22,W0=26;    // timeline runs 8 AM → 10 PM; the screen fits 8 AM → 5 PM, later hours need a scroll
+let PH=60;                                   // pixels per hour — recalculated in renderTimeline() so 8 AM–5 PM always fits the screen
 const Y=m=>m*PH/60;
 const GREY='#94a3b8';
 const TITLES={home:'Portal',grades:'Grades',schedule:'Schedule',attendance:'Attendance',staff:'Contact Staff',transcript:'Transcript',evaluate:'Evaluate',sis:'SIS',others:'Other Schedules',settings:'Settings',tasks:'Tasks',dev:'About'};
@@ -25,6 +25,7 @@ function info(label){
 }
 /* the schedule in data.json is per SECTION (1–24): "schedules": {"20":[...]}. Group g owns sections 3g-2 … 3g, e.g. group 7 → 19, 20, 21 */
 const sched=()=>(D.schedules||{})[S.section]||[];
+const secsOf=g=>[1,2,3].map(i=>(g-1)*3+i);   // group g → its 3 sections (group 7 → 19, 20, 21)
 const eventsOn=d=>[...sched().filter(e=>e.day===d.getDay()),...S.mine.filter(e=>e.date===iso(d))].sort((a,b)=>mins(a.start)-mins(b.start));
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.id);toast.id=setTimeout(()=>t.classList.remove('show'),2600)}
 
@@ -76,12 +77,36 @@ function tasks(){
   $('#pl').replaceChildren(item({ic:'+',t:'Add a task',s:'Homework, revision, anything to remember',btn:'Add',
     fn:()=>ask('New task',[{label:'Task'},{label:'Course',type:'select',opts:['General',...Object.keys(D.courses)],val:'General'}]).then(r=>{if(r&&r[0].trim()){S.tasks.unshift({t:r[0].trim(),c:r[1],done:false});save();tasks()}})}),...rows);
 }
+/* Settings: change group / section */
+const pickSection=(g,cur)=>ask('Your section',[{label:`Group ${g} · choose your section`,type:'chips',opts:secsOf(g),val:cur}]);
+function changeGroup(){
+  ask('Change group',[{label:'Your group (1–8)',type:'chips',opts:[1,2,3,4,5,6,7,8],val:S.group}]).then(async r=>{
+    if(!r)return;const g=+r[0],s=await pickSection(g,g===S.group?S.section:'');
+    if(!s)return;S.group=g;S.section=+s[0];save();renderHome();settings();toast(`Now in Group ${g} · Section ${S.section}`);
+  });
+}
+function changeSection(){
+  pickSection(S.group,S.section).then(r=>{if(!r)return;S.section=+r[0];save();renderHome();settings();toast(`Now in Section ${S.section}`)});
+}
+/* offline status shown in Settings */
+async function offlineState(){
+  if(!window.isSecureContext||!('serviceWorker' in navigator))return 'Not available — open the site with https://';
+  try{
+    const reg=await navigator.serviceWorker.getRegistration();
+    if(!reg||!reg.active)return 'Not ready yet — stay online for a few seconds, then reopen the app';
+    const k=(await caches.keys()).find(x=>x.startsWith('portal-')),n=k?(await (await caches.open(k)).keys()).length:0;
+    return navigator.serviceWorker.controller&&n>=4?'Ready — the app works without internet ✓':'Almost — close the app and open it once more while online';
+  }catch(e){return 'Not available on this browser'}
+}
 function settings(){
+  const off=item({ic:'📶',t:'Offline mode',s:'Checking…'});
+  offlineState().then(t=>{off.querySelector('small').textContent=t});
   $('#pl').replaceChildren(
     item({ic:'✏️',t:'Name',s:S.name,btn:'Edit',fn:()=>ask('Your name',[{label:'Name',val:S.name}]).then(r=>{if(r&&r[0].trim()){S.name=r[0].trim();save();renderHome();settings()}})}),
-    item({ic:'👥',t:'Group',s:`Group ${S.group} · locked, it can't be changed`}),
-    item({ic:'🎓',t:'Section',s:`Section ${S.section} · locked, it can't be changed`}),
+    item({ic:'👥',t:'Group',s:`Group ${S.group}`,btn:'Edit',fn:changeGroup}),
+    item({ic:'🎓',t:'Section',s:`Section ${S.section}`,btn:'Edit',fn:changeSection}),
     item({ic:'🌓',t:'Theme',s:S.theme==='light'?'White':'Black',btn:'Switch',fn:()=>{S.theme=S.theme==='light'?'dark':'light';save();setTheme();settings()}}),
+    off,
     item({ic:'🗑',t:'Reset saved data',s:'Events, read notifications and tasks (name, group and section stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,section:S.section,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
 }
 
@@ -152,7 +177,7 @@ function renderSchedule(){
 function renderTimeline(focus){
   $('#title').textContent=sel.toLocaleString('en',{month:'long'});
   const evs=eventsOn(sel),span=END_H-HOUR0,w=$('#tlw'),cs=getComputedStyle(w);
-  // pixels per hour: sized so 9 AM → 5 PM exactly fills the visible area; 5 PM → 10 PM sits below (scroll)
+  // pixels per hour: sized so 8 AM → 5 PM exactly fills the visible area; 5 PM → 10 PM sits below (scroll)
   PH=Math.max(44,Math.floor((w.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom)-2)/(SHOW_END-HOUR0)));
   const tl=$('#tl');tl.replaceChildren();tl.style.height=Y(span*60)+'px';
   for(let h=HOUR0;h<=END_H;h++){
@@ -162,7 +187,7 @@ function renderTimeline(focus){
   evs.forEach(e=>{
     const i=info(e.course),own=!!e.date,s=mins(e.start),f=mins(e.end),hp=Y(f-s)-2;
     const el=fill(tpl('t-event'),{course:i.name,time:`${clock(e.start)} – ${clock(e.end)}`,title:e.title,room:e.room});
-    el.classList.toggle('own',own);el.classList.toggle('sm',hp<96);el.classList.toggle('xs',hp<54);
+    el.classList.toggle('own',own);el.classList.toggle('sm',hp<96);el.classList.toggle('xs',hp<50);
     el.style.cssText=`top:${Y(s-HOUR0*60)+1}px;height:${hp}px;--a:${own?'var(--coral)':i.colors[0]};--b:${own?'var(--coral)':i.colors[1]}`;
     el.onclick=()=>own?ask('Delete event?',[],e.course).then(r=>{if(r){S.mine=S.mine.filter(x=>x!==e);save();renderTimeline()}}):toast([e.staff,e.room].filter(Boolean).join(' · ')||i.name);
     tl.append(el);
@@ -172,7 +197,7 @@ function renderTimeline(focus){
   if(focus)focusTimeline(focus===2);
 }
 function focusTimeline(smooth){
-  // 9 AM always stays at the top; hours after 5 PM are reached by scrolling
+  // 8 AM always stays at the top; hours after 5 PM are reached by scrolling
   $('#tlw').scrollTo({top:0,behavior:smooth?'smooth':'auto'});
 }
 const goToday=()=>{sel=new Date();markSel();scrollWeek(true);renderTimeline(2)};
@@ -180,7 +205,7 @@ async function addEvt(def={}){
   const r=await ask('Add event',[{label:'Title',val:def.t},{label:'Date',type:'date',val:def.d||iso(sel)},{label:'Start time',type:'time',val:def.s||'14:00'},{label:'End time',type:'time',val:def.e||'15:00'}]);
   if(!r)return;const[t,date,s,e]=r,again=msg=>{toast(msg);return addEvt({t,d:date,s,e})};
   if(mins(e)<=mins(s))return again('End time must be after the start time');
-  if(mins(s)<HOUR0*60||mins(e)>END_H*60)return again('Pick times between 9:00 AM and 10:00 PM');
+  if(mins(s)<HOUR0*60||mins(e)>END_H*60)return again('Pick times between 8:00 AM and 10:00 PM');
   S.mine.push({course:t.trim()||'Event',title:'Personal',date,start:s,end:e,room:''});
   save();sel=new Date(date+'T00:00');markSel();scrollWeek(true);renderTimeline(2);
 }
@@ -281,18 +306,16 @@ elastic($('main'),()=>$('main .view:not([hidden])'),e=>!e.target.closest('#notif
 elastic($('#notifs'),()=>$('#notifs'));
 elastic($('.tlw'),()=>$('#tl'));
 
-const secsOf=g=>[1,2,3].map(i=>(g-1)*3+i);   // group g → its 3 sections (group 7 → 19, 20, 21)
 async function onboard(name=S.name||'',grp=S.group||'',sec=''){
-  if(!S.name||!S.group){                      // step 1: name + group (skipped when the group is already locked in)
-    const r=await ask('Welcome 👋',[{label:'Your name',val:name},{label:'Your group (1–8)',type:'chips',opts:[1,2,3,4,5,6,7,8],val:grp}],"Pick your group carefully — you won't be able to change it later.",true);
+  if(!S.name||!S.group){                      // step 1: name + group (skipped when they are already saved)
+    const r=await ask('Welcome 👋',[{label:'Your name',val:name},{label:'Your group (1–8)',type:'chips',opts:[1,2,3,4,5,6,7,8],val:grp}],"You can change your group and section later from Settings.",true);
     name=r[0].trim();grp=r[1];
     if(!name||!/^[1-8]$/.test(grp)){toast('Enter your name and choose a group');return onboard(name,grp,sec)}
   }
   const g=+grp,opts=secsOf(g);                // step 2: your tutorial section inside that group
-  const r2=await ask('Your section',[{label:`Group ${g} · choose your section`,type:'chips',opts,val:opts.includes(+sec)?sec:''}],"Pick your tutorial section carefully — you won't be able to change it later.",true);
+  const r2=await ask('Your section',[{label:`Group ${g} · choose your section`,type:'chips',opts,val:opts.includes(+sec)?sec:''}],"You can change it later from Settings.",true);
   const s=+r2[0];
   if(!opts.includes(s)){toast('Choose your section');return onboard(name,grp,sec)}
-  if(!await ask(`Lock in Group ${g} · Section ${s}?`,[],"You won't be able to change them again."))return onboard(name,grp,s);
   S.name=name;S.group=g;S.section=s;save();renderHome();show('home');toast(`Welcome, ${name}!`);
 }
 /* data: data.json (data/data.json or next to index.html) is the only source. Every successful load is cached in localStorage; the cache is used when offline. */
