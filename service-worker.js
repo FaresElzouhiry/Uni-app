@@ -1,7 +1,7 @@
 /* Student Portal — service worker: the app opens and works with NO internet.
    Put this file next to index.html. Whenever you upload new files, change CACHE_VERSION (v1 → v2 …)
    so every phone downloads the new version automatically. */
-const CACHE_VERSION = 'v22';
+const CACHE_VERSION = 'v28';
 const CACHE = 'portal-' + CACHE_VERSION;
 
 // Everything the app needs. Both layouts are listed (all files in one folder, or css/ js/ data/ folders);
@@ -66,7 +66,7 @@ self.addEventListener('fetch', (event) => {
   const url = event.request.url;
 
   // استثني سكريبت Umami عشان يشتغل من غير تدخل الـ Service Worker
-  if (url.includes('umami.is')) {
+  if (url.includes('script.googles.com')) {
     return; // سيبه يروح للنت مباشرة
   }
 

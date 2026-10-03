@@ -350,3 +350,16 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!reloading){reloading=true;location.reload()}});
   addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
 }
+// تتبع الزيارات
+(function trackVisit() {
+  const params = new URLSearchParams({
+    track: '1',
+    page: location.pathname,
+    ref: document.referrer || 'direct',
+    device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+    lang: navigator.language || 'unknown',
+    screen: screen.width + 'x' + screen.height
+  });
+  
+  fetch(FEEDBACK_URL + '?' + params.toString(), { mode: 'no-cors' }).catch(function() {});
+})();
