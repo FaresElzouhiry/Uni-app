@@ -1,7 +1,7 @@
 /* Student Portal — service worker: the app opens and works with NO internet.
    Put this file next to index.html. Whenever you upload new files, change CACHE_VERSION (v1 → v2 …)
    so every phone downloads the new version automatically. */
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v20';
 const CACHE = 'portal-' + CACHE_VERSION;
 
 // Everything the app needs. Both layouts are listed (all files in one folder, or css/ js/ data/ folders);
@@ -62,10 +62,24 @@ async function staleWhileRevalidate(req, evt) {
   return new Response('', { status: 404 });
 }
 
-self.addEventListener('fetch', e => {
-  const req = e.request, url = new URL(req.url);
-  if (req.method !== 'GET') return;
-  const same = url.origin === location.origin;
-  if (!same && !EXTERNAL.includes(url.hostname)) return;      // e.g. the feedback request goes straight to Google
-  e.respondWith(same && /data\.json$/.test(url.pathname) ? networkFirst(req) : staleWhileRevalidate(req, e));
+self.addEventListener('fetch', (event) => {
+  const url = event.request.url;
+
+  // تجاهل أي طلب لـ GoatCounter — سيبه يروح للنت مباشرة
+  if (url.includes('goatcounter.com') || url.includes('gc.zgo.at')) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
+        if (event.request.method === 'GET' && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match('./index.html'));
+    })
+  );
 });
