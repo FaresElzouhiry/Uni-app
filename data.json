@@ -16,7 +16,7 @@
    {"course": "Engineering Drawing", "title": "Lecture", "day": 0, "start": "09:00", "end": "09:50", "room": "Red Hall", "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"},
    {"course": "Engineering Drawing", "title": "Lab", "day": 0, "start": "09:50", "end": "12:25", "room": "TBD", "staff": "Prof. Mohamed Nassef and Dr. Ibrahim Maher"},
    {"course": "Physics Lab (1) / Chemistry Lab (1)", "title": "Lab", "day": 0, "start": "12:30", "end": "15:55", "room": "", "staff": ""},
-   {"course": "Physics (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "B8-G-41", "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"},
+   {"course": "Physics1 (1)", "title": "Lecture", "day": 1, "start": "09:00", "end": "10:40", "room": "B8-G-41", "staff": "Dr. Sayed Soliman and Dr. Amr Hussein"},
    {"course": "Mathematics (1)", "title": "Lecture", "day": 1, "start": "10:45", "end": "12:25", "room": "B8-G-41", "staff": "Prof. Waheed Zahra and Prof. Ahmed Elsaid"},
    {"course": "Fundamentals of Communication", "title": "Lecture", "day": 1, "start": "12:30", "end": "13:20", "room": "B8-G-41", "staff": "Dr. Amal Gomaa"},
    {"course": "Mathematics (1)", "title": "Tutorial", "day": 2, "start": "09:00", "end": "10:40", "room": "B9-F1-04", "staff": ""},
