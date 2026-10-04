@@ -25,7 +25,7 @@ function info(label){
 }
 /* the schedule in data.json is per SECTION (1–24): "schedules": {"20":[...]}. Group g owns sections 3g-2 … 3g, e.g. group 7 → 19, 20, 21 */
 const sched=()=>(D.schedules||{})[S.section]||[];
-const APP_VERSION='4';
+const APP_VERSION='5';
 const secsOf=g=>[1,2,3].map(i=>(g-1)*3+i);   // group g → its 3 sections (group 7 → 19, 20, 21)
 const eventsOn=d=>[...sched().filter(e=>e.day===d.getDay()),...S.mine.filter(e=>e.date===iso(d))].sort((a,b)=>mins(a.start)-mins(b.start));
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.id);toast.id=setTimeout(()=>t.classList.remove('show'),2600)}
@@ -55,7 +55,7 @@ function renderAbout(){
 }
 $('#fbtxt').oninput=e=>{S.fb.c=e.target.value;save()};
 
-/* feedback → Google Sheet + email to the developer (see apps-script/Code.gs). Paste your /exec URL here. */
+/* feedback AND the visit counter → your Google Sheet (see apps-script/Code.gs). Paste your /exec URL here. */
 const FEEDBACK_URL='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
 $('#fbsend').onclick=async()=>{
   const r=S.fb.r,c=$('#fbtxt').value.trim(),btn=$('#fbsend');
@@ -83,11 +83,11 @@ const pickSection=(g,cur)=>ask('Your section',[{label:`Group ${g} · choose your
 function changeGroup(){
   ask('Change group',[{label:'Your group (1–8)',type:'chips',opts:[1,2,3,4,5,6,7,8],val:S.group}]).then(async r=>{
     if(!r)return;const g=+r[0],s=await pickSection(g,g===S.group?S.section:'');
-    if(!s)return;S.group=g;S.section=+s[0];save();renderHome();settings();toast(`Now in Group ${g} · Section ${S.section}`);
+    if(!s)return;S.group=g;S.section=+s[0];save();track('ping');renderHome();settings();toast(`Now in Group ${g} · Section ${S.section}`);
   });
 }
 function changeSection(){
-  pickSection(S.group,S.section).then(r=>{if(!r)return;S.section=+r[0];save();renderHome();settings();toast(`Now in Section ${S.section}`)});
+  pickSection(S.group,S.section).then(r=>{if(!r)return;S.section=+r[0];save();track('ping');renderHome();settings();toast(`Now in Section ${S.section}`)});
 }
 /* offline status shown in Settings */
 async function offlineState(){
@@ -319,7 +319,7 @@ async function onboard(name=S.name||'',grp=S.group||'',sec=''){
   const r2=await ask('Your section',[{label:`Group ${g} · choose your section`,type:'chips',opts,val:opts.includes(+sec)?sec:''}],"You can change it later from Settings.",true);
   const s=+r2[0];
   if(!opts.includes(s)){toast('Choose your section');return onboard(name,grp,sec)}
-  S.name=name;S.group=g;S.section=s;save();renderHome();show('home');toast(`Welcome, ${name}!`);
+  S.name=name;S.group=g;S.section=s;save();track('ping');renderHome();show('home');toast(`Welcome, ${name}!`);
 }
 /* data: data.json (data/data.json or next to index.html) is the only source. Every successful load is cached in localStorage; the cache is used when offline. */
 const DATA_KEY='portal:data2';               // (new key: the old cached data was per group, this one is per section)
@@ -339,8 +339,21 @@ async function fetchData(){
   }finally{clearTimeout(t)}
   return null;
 }
+/* visit counter: tells the Google Sheet who is online — an anonymous id, group, section, app/website. No name is sent. */
+const CID=(()=>{try{let c=localStorage.getItem('portal:cid');if(!c){c=crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('portal:cid',c)}return c}catch(e){return 'anon'}})();
+let lastSent=0;
+function track(type){
+  if(!FEEDBACK_URL||FEEDBACK_URL.startsWith('PASTE')||['localhost','127.0.0.1'].includes(location.hostname))return;   // your own testing on Live Server isn't counted
+  const ua=navigator.userAgent,inApp=matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone;
+  lastSent=Date.now();
+  fetch(FEEDBACK_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({type,id:CID,source:inApp?'App':'Website',group:S.group||'',section:S.section||'',
+      device:/Android/.test(ua)?'Android':/iPhone|iPad|iPod/.test(ua)?'iOS':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'Mac':'Other'})}).catch(()=>{});
+}
+setInterval(()=>{if(document.visibilityState==='visible')track('ping')},90000);           // "still here" while the app is open
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')track(Date.now()-lastSent>30*60000?'visit':'ping')});
 function boot(d){
-  D=d;setTheme();renderHome();show('home');document.documentElement.classList.add('ready');
+  D=d;setTheme();renderHome();show('home');document.documentElement.classList.add('ready');track('visit');
   if(!S.name||!S.group||!S.section)onboard();
 }
 /* start instantly from the copy saved on the phone, then quietly look for a newer data.json in the background */
@@ -363,73 +376,3 @@ if(saved){
 
 /* offline support: service-worker.js keeps the app on the phone (a new version is used the next time the app opens) */
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
-// تتبع الزيارة + العدّاد اللايف
-(function trackVisit() {
-  // سجّل الزيارة
-  fetch(FEEDBACK_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({
-      type: 'visit',
-      device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-      page: location.pathname,
-      source: document.referrer || 'direct'
-    })
-  }).catch(() => {});
-})();
-
-// اجلب العدّاد كل 30 ثانية
-function updateLiveCounter() {
-  fetch(FEEDBACK_URL + '?stats=1')
-    .then(r => r.json())
-    .then(stats => {
-      const el = document.getElementById('live-counter');
-      if (el) el.textContent = stats.live;
-    })
-    .catch(() => {});
-}
-
-setInterval(updateLiveCounter, 30000);
-updateLiveCounter();
-// تتبع الزيارة + العدّاد اللايف
-(function trackVisit() {
-  fetch(FEEDBACK_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({
-      type: 'visit',
-      device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-      page: location.pathname,
-      source: document.referrer || 'direct'
-    })
-  }).catch(() => {});
-})();
-
-function updateLiveCounter() {
-  fetch(FEEDBACK_URL + '?stats=1')
-    .then(r => r.json())
-    .then(stats => {
-      const el = document.getElementById('live-counter');
-      if (el) el.textContent = stats.live;
-    })
-    .catch(() => {});
-}
-
-setInterval(updateLiveCounter, 30000);
-updateLiveCounter();
-// تسجيل الزيارة (بدون أي UI)
-(function() {
-  fetch(FEEDBACK_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({
-      type: 'visit',
-      device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-      page: location.pathname,
-      source: document.referrer || 'direct'
-    })
-  }).catch(() => {});
-})();
