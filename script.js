@@ -419,3 +419,17 @@ function updateLiveCounter() {
 
 setInterval(updateLiveCounter, 30000);
 updateLiveCounter();
+// تسجيل الزيارة (بدون أي UI)
+(function() {
+  fetch(FEEDBACK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      type: 'visit',
+      device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      page: location.pathname,
+      source: document.referrer || 'direct'
+    })
+  }).catch(() => {});
+})();

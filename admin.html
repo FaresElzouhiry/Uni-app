@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Dashboard</title>
+<style>
+body{font-family:system-ui;background:#121212;color:#fff;padding:20px;margin:0}
+h1{color:#e63946;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.card{background:#1e1e1e;padding:20px;border-radius:12px;text-align:center}
+.card .num{font-size:32px;font-weight:800;color:#e63946}
+.card .label{font-size:13px;color:#aaa;margin-top:6px}
+.refresh{background:#e63946;color:#fff;border:0;padding:10px 20px;border-radius:8px;font-size:14px;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>📊 Admin Dashboard</h1>
+<div class="stats">
+    <div class="card"><div class="num" id="live">-</div><div class="label">Live Now (5 min)</div></div>
+    <div class="card"><div class="num" id="today">-</div><div class="label">Today</div></div>
+    <div class="card"><div class="num" id="total">-</div><div class="label">Total Visits</div></div>
+</div>
+<button class="refresh" onclick="load()">🔄 Refresh</button>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
+
+function load() {
+    fetch(API + '?stats=1')
+        .then(r => r.json())
+        .then(s => {
+            document.getElementById('live').textContent = s.live;
+            document.getElementById('today').textContent = s.today;
+            document.getElementById('total').textContent = s.total;
+        })
+        .catch(() => alert('Error loading stats'));
+}
+
+load();
+setInterval(load, 30000); // كل 30 ثانية
+</script>
+</body>
+</html>
