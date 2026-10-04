@@ -25,6 +25,7 @@ function info(label){
 }
 /* the schedule in data.json is per SECTION (1–24): "schedules": {"20":[...]}. Group g owns sections 3g-2 … 3g, e.g. group 7 → 19, 20, 21 */
 const sched=()=>(D.schedules||{})[S.section]||[];
+const APP_VERSION='4';
 const secsOf=g=>[1,2,3].map(i=>(g-1)*3+i);   // group g → its 3 sections (group 7 → 19, 20, 21)
 const eventsOn=d=>[...sched().filter(e=>e.day===d.getDay()),...S.mine.filter(e=>e.date===iso(d))].sort((a,b)=>mins(a.start)-mins(b.start));
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.id);toast.id=setTimeout(()=>t.classList.remove('show'),2600)}
@@ -99,7 +100,8 @@ async function offlineState(){
   }catch(e){return 'Not available on this browser'}
 }
 function settings(){
-  const off=item({ic:'📶',t:'Offline mode',s:'Checking…'});
+  const mode=['fullscreen','standalone','minimal-ui'].find(m=>matchMedia(`(display-mode: ${m})`).matches)||'browser tab';
+  const off=item({ic:'📶',t:'Offline mode',s:'Checking…'}),info_=item({ic:'ℹ️',t:'App info',s:`Version ${APP_VERSION} · opened as: ${mode}`});
   offlineState().then(t=>{off.querySelector('small').textContent=t});
   $('#pl').replaceChildren(
     item({ic:'✏️',t:'Name',s:S.name,btn:'Edit',fn:()=>ask('Your name',[{label:'Name',val:S.name}]).then(r=>{if(r&&r[0].trim()){S.name=r[0].trim();save();renderHome();settings()}})}),
@@ -107,6 +109,7 @@ function settings(){
     item({ic:'🎓',t:'Section',s:`Section ${S.section}`,btn:'Edit',fn:changeSection}),
     item({ic:'🌓',t:'Theme',s:S.theme==='light'?'White':'Black',btn:'Switch',fn:()=>{S.theme=S.theme==='light'?'dark':'light';save();setTheme();settings()}}),
     off,
+    info_,
     item({ic:'🗑',t:'Reset saved data',s:'Events, read notifications and tasks (name, group and section stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,section:S.section,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
 }
 
@@ -321,45 +324,42 @@ async function onboard(name=S.name||'',grp=S.group||'',sec=''){
 /* data: data.json (data/data.json or next to index.html) is the only source. Every successful load is cached in localStorage; the cache is used when offline. */
 const DATA_KEY='portal:data2';               // (new key: the old cached data was per group, this one is per section)
 const valid=d=>d&&d.courses&&d.schedules&&['exams','notifications'].every(k=>Array.isArray(d[k]));
-async function loadData(){
+const cachedData=()=>{try{const d=JSON.parse(localStorage.getItem(DATA_KEY));return valid(d)?d:null}catch(e){return null}};
+/* data.json lives in data/ or next to index.html. Each answer must be REAL json (a host that answers every unknown address with index.html is skipped). */
+async function fetchData(){
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
   try{
-    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),5000);
-    let r=await fetch('data/data.json',{cache:'no-cache',signal:ctl.signal});
-    if(!r.ok)r=await fetch('data.json',{cache:'no-cache',signal:ctl.signal});   // also works when data.json sits next to index.html
-    clearTimeout(t);
-    if(!r.ok)throw 0;const d=await r.json();if(!valid(d))throw 0;
-    try{localStorage.setItem(DATA_KEY,JSON.stringify(d))}catch(e){}
-    return d;
-  }catch(e){
-    try{const d=JSON.parse(localStorage.getItem(DATA_KEY));return valid(d)?d:null}catch(e){return null}
-  }
+    for(const u of ['data/data.json','data.json']){
+      try{
+        const r=await fetch(u,{cache:'no-cache',signal:ctl.signal});if(!r.ok)continue;
+        const d=await r.json();
+        if(valid(d)){try{localStorage.setItem(DATA_KEY,JSON.stringify(d))}catch(e){}return d}
+      }catch(e){if(ctl.signal.aborted)break}
+    }
+  }finally{clearTimeout(t)}
+  return null;
 }
-loadData().then(d=>{
-  if(!d){
+function boot(d){
+  D=d;setTheme();renderHome();show('home');document.documentElement.classList.add('ready');
+  if(!S.name||!S.group||!S.section)onboard();
+}
+/* start instantly from the copy saved on the phone, then quietly look for a newer data.json in the background */
+const saved=cachedData();
+if(saved){
+  boot(saved);
+  fetchData().then(d=>{
+    if(!d||JSON.stringify(d)===JSON.stringify(D))return;
+    D=d;renderHome();if(view==='schedule')renderSchedule();
+  });
+}else{
+  fetchData().then(d=>{
+    if(d)return boot(d);
     $('#hello').textContent="Couldn't load data";
     const p=document.createElement('p');p.className='empty';
-    p.textContent='Open the app from a web server (Live Server) and make sure data.json is in the data folder (or next to index.html).';
-    $('#notifs').replaceChildren(p);document.documentElement.classList.add('ready');return;
-  }
-  D=d;setTheme();renderHome();show('home');document.documentElement.classList.add('ready');if(!S.name||!S.group||!S.section)onboard();
-});
-
-/* offline support: service-worker.js keeps the app on the phone; when a new version is uploaded the page reloads once */
-if('serviceWorker' in navigator){
-  const had=!!navigator.serviceWorker.controller;let reloading=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had&&!reloading){reloading=true;location.reload()}});
-  addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
-}
-// تتبع الزيارات
-(function trackVisit() {
-  const params = new URLSearchParams({
-    track: '1',
-    page: location.pathname,
-    ref: document.referrer || 'direct',
-    device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
-    lang: navigator.language || 'unknown',
-    screen: screen.width + 'x' + screen.height
+    p.textContent='Open the app from a web server (Live Server / your site) and make sure data.json is in the data folder (or next to index.html).';
+    $('#notifs').replaceChildren(p);document.documentElement.classList.add('ready');
   });
-  
-  fetch(FEEDBACK_URL + '?' + params.toString(), { mode: 'no-cors' }).catch(function() {});
-})();
+}
+
+/* offline support: service-worker.js keeps the app on the phone (a new version is used the next time the app opens) */
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
