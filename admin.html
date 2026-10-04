@@ -22,8 +22,19 @@ h1{color:#e63946;margin-bottom:20px}
     <div class="card"><div class="num" id="total">-</div><div class="label">Total Visits</div></div>
 </div>
 <button class="refresh" onclick="load()">🔄 Refresh</button>
+<button class="refresh" onclick="resetStats()" style="background:#555;margin-right:8px;">🗑 Reset</button>
 
 <script>
+    function resetStats() {
+  if (!confirm('متأكد إنك عايز تصفّر كل البيانات؟')) return;
+  
+  fetch(API + '?reset=1')
+    .then(() => {
+      alert('تم التصفير!');
+      load();
+    })
+    .catch(() => alert('فيه مشكلة في الاتصال'));
+}
 const API = 'https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
 
 function load() {
