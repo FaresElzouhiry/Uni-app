@@ -1,7 +1,7 @@
 {
   "name": "E-just Student Portal",
   "short_name": "Juster",
-  "description": "Student portal for university schedules",
+  "description": "Student Portal — schedule, tasks and more",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
