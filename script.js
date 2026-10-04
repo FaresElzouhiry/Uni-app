@@ -363,3 +363,59 @@ if(saved){
 
 /* offline support: service-worker.js keeps the app on the phone (a new version is used the next time the app opens) */
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
+// تتبع الزيارة + العدّاد اللايف
+(function trackVisit() {
+  // سجّل الزيارة
+  fetch(FEEDBACK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      type: 'visit',
+      device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      page: location.pathname,
+      source: document.referrer || 'direct'
+    })
+  }).catch(() => {});
+})();
+
+// اجلب العدّاد كل 30 ثانية
+function updateLiveCounter() {
+  fetch(FEEDBACK_URL + '?stats=1')
+    .then(r => r.json())
+    .then(stats => {
+      const el = document.getElementById('live-counter');
+      if (el) el.textContent = stats.live;
+    })
+    .catch(() => {});
+}
+
+setInterval(updateLiveCounter, 30000);
+updateLiveCounter();
+// تتبع الزيارة + العدّاد اللايف
+(function trackVisit() {
+  fetch(FEEDBACK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      type: 'visit',
+      device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      page: location.pathname,
+      source: document.referrer || 'direct'
+    })
+  }).catch(() => {});
+})();
+
+function updateLiveCounter() {
+  fetch(FEEDBACK_URL + '?stats=1')
+    .then(r => r.json())
+    .then(stats => {
+      const el = document.getElementById('live-counter');
+      if (el) el.textContent = stats.live;
+    })
+    .catch(() => {});
+}
+
+setInterval(updateLiveCounter, 30000);
+updateLiveCounter();

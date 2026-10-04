@@ -27,7 +27,6 @@ html:not(.ready) #app{opacity:0}
 try{if(JSON.parse(localStorage.getItem('st')).theme==='light'){document.documentElement.dataset.theme='light';document.querySelector('meta[name=theme-color]').content='#ffffff'}}catch(e){}
 setTimeout(function(){document.documentElement.classList.add('ready')},4000);   // safety: never stay black
 </script>
-<script defer src="https://cloud.umami.is/script.js" data-website-id="efd15f62-5b60-403f-849b-9060b6bfabf5"></script>
 <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -70,6 +69,10 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
     </header>
 
     <section id="home" class="view">
+      <div class="live-counter-box">
+  <span class="live-dot"></span>
+  <span id="live-counter">0</span> online now
+</div>
       <p id="hello" class="hello"></p>
       <div class="quick">
         <button data-view="tasks"><span class="ic w"><svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true"><rect x="4" y="4" width="32" height="32" rx="9" fill="none" stroke="#111" stroke-width="3.5"/><path d="M12 21l6 6 11-13" fill="none" stroke="#e5202e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Tasks</button>
