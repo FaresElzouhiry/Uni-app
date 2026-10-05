@@ -39,21 +39,24 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
 <body>
 <div id="app">
   <aside id="menu">
-    <div class="avatar"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21c0-5 3.5-7 8.5-7s8.5 2 8.5 7z"/></svg></div>
-    <p id="who" class="who"></p>
+    <div class="mh">
+      <div class="avatar"><b id="ini"></b></div>
+      <p id="who" class="who"><b id="wn"></b><small id="wg"></small></p>
+    </div>
     <nav>
-      <button data-view="home" class="on">Home</button>
-      <button data-view="grades">Grades</button>
-      <button data-view="schedule">Schedule</button>
-      <button data-view="attendance">Attendance</button>
-      <button data-view="staff">Contact Staff</button>
-      <button data-view="transcript">Transcript</button>
-      <button data-view="evaluate">Evaluate</button>
+      <button data-view="home" data-ic="home" class="on">Home</button>
+      <button data-view="grades" data-ic="grades">Grades</button>
+      <button data-view="schedule" data-ic="schedule">Schedule</button>
+      <button data-view="others" data-ic="others">Other Schedules</button>
+      <button data-view="attendance" data-ic="attendance">Attendance</button>
+      <button data-view="staff" data-ic="staff">Contact Staff</button>
+      <button data-view="transcript" data-ic="transcript">Transcript</button>
+      <button data-view="evaluate" data-ic="evaluate">Evaluate</button>
     </nav>
     <button class="cms" data-view="sis">SIS</button>
     <div class="foot">
-      <button data-view="settings">Settings</button>
-      <button data-view="dev">About</button>
+      <button data-view="settings" data-ic="settings">Settings</button>
+      <button data-view="dev" data-ic="about">About</button>
     </div>
   </aside>
   <div id="scrim"></div>
@@ -68,26 +71,52 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
       </div>
     </header>
 
+    <!-- HOME -->
     <section id="home" class="view">
+      <div class="gl"><small id="gdate"></small><span id="gchip" class="gchip"></span></div>
       <p id="hello" class="hello"></p>
-      <div class="quick">
-        <button data-view="tasks"><span class="ic w"><svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true"><rect x="4" y="4" width="32" height="32" rx="9" fill="none" stroke="#111" stroke-width="3.5"/><path d="M12 21l6 6 11-13" fill="none" stroke="#e5202e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Tasks</button>
-        <button data-view="others"><span class="ic g">🗓</span>Other Schedules</button>
+
+      <button class="hero" data-view="schedule">
+        <span class="hl"><small id="nx1"></small><em id="nxc" hidden></em></span>
+        <strong id="nx2"></strong>
+        <small id="nx3"></small>
+        <i id="nxp" class="pb" hidden><b></b></i>
+      </button>
+
+      <div class="tiles">
+        <button data-view="tasks"><span class="ic" data-svg="tasks"></span><b>Tasks</b><small id="tkn"></small></button>
+        <button data-view="others"><span class="ic" data-svg="others"></span><b>Other schedules</b><small>Any group, any section</small></button>
+        <button data-view="exams"><span class="ic" data-svg="exams"></span><b>Exams</b><small id="exs"></small></button>
       </div>
-      <div class="row">
-        <button class="exams" data-view="others"><small>this week</small><b id="exn">0</b><span id="exl">exams</span></button>
-        <button class="next" data-view="schedule"><small id="nx1"></small><strong id="nx2"></strong><small id="nx3"></small></button>
-      </div>
+
+      <div class="hd"><h2>Today</h2><small id="tsum"></small></div>
+      <div id="tdy" class="tdy"></div>
+
       <div class="hd"><h2>Notifications</h2><button id="readall" class="pillo">Read All</button></div>
       <div id="notifs" class="list"></div>
     </section>
 
+    <!-- SCHEDULE -->
     <section id="schedule" class="view" hidden>
       <div id="wk" class="wk"></div>
+      <div id="dsum" class="dsum"></div>
       <p id="nosch" class="empty" hidden>The schedule for your section isn't available yet.</p>
       <div id="tlw" class="tlw"><div id="tl" class="tl"></div></div>
     </section>
 
+    <!-- OTHER SCHEDULES: pick a group + one of its sections (never your own) → that section's week, day by day -->
+    <section id="others" class="view" hidden>
+      <div class="pick">
+        <label class="sel"><span>Group</span><select id="og" aria-label="Group"></select></label>
+        <label class="sel"><span>Section</span><select id="os" aria-label="Section"></select></label>
+      </div>
+      <p id="ohint" class="lead"></p>
+      <div id="osum" class="osum" hidden></div>
+      <div id="odays" class="dtabs" hidden></div>
+      <div id="olist" class="olist"></div>
+    </section>
+
+    <!-- tasks / exams / settings -->
     <section id="page" class="view" hidden><div id="pl" class="list"></div></section>
 
     <section id="dev" class="view" hidden>
@@ -102,6 +131,7 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
         <b>@faress_ae</b>
         <span class="go">Open profile ↗</span>
       </a>
+      <button id="share" class="cta ghost">Share the app with your classmates</button>
       <div class="fb">
         <h3>Rate the app</h3>
         <div id="stars" class="stars" role="group" aria-label="Rating"></div>
@@ -111,7 +141,13 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
       </div>
     </section>
 
-    <section id="wip" class="view" hidden><p>Still under development</p></section>
+    <section id="wip" class="view" hidden>
+      <div class="soon">
+        <span id="wipi" class="ic"></span>
+        <b id="wipt"></b>
+        <p>Still under development</p>
+      </div>
+    </section>
   </main>
   <div id="toast" role="status"></div>
 </div>
@@ -119,10 +155,12 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
 <dialog id="dlg"><form method="dialog"></form></dialog>
 
 <!-- Templates: cloned by js/script.js and filled from data/data.json -->
-<template id="t-notif"><article class="n"><span class="bell">🔔</span><div><b data-f="title"></b><small><span data-f="course"></span><br><span data-f="staff"></span></small></div><time data-f="ago"></time></article></template>
+<template id="t-notif"><article class="n"><span class="bell ib"></span><div><b data-f="title"></b><small><span data-f="course"></span><br><span data-f="staff"></span></small></div><time data-f="ago"></time></article></template>
 <template id="t-item"><article class="n"><span class="bell" data-f="ic"></span><div><b data-f="t"></b><small data-f="s"></small></div><time data-f="r"></time><button class="pill" data-f="btn"></button></article></template>
 <template id="t-day"><button><span data-f="dow"></span><b data-f="num"></b></button></template>
 <template id="t-event"><article class="ev"><b data-f="course"></b><small class="tm"><span data-f="time"></span><em data-f="title"></em></small><small class="rm" data-f="room"></small></article></template>
+<template id="t-tday"><article class="td"><div class="tt"><b data-f="s"></b><small data-f="e"></small></div><div class="tb"><b data-f="course"></b><small data-f="meta"></small></div><span class="st" data-f="st"></span></article></template>
+<template id="t-oc"><article class="oc"><div class="tm2"><b data-f="s"></b><small data-f="e"></small></div><div class="bd"><b data-f="course"></b><div class="meta"><em data-f="title"></em><em data-f="len"></em><span data-f="room"></span></div><small data-f="staff"></small></div></article></template>
 
 <script src="js/script.js" onerror="var s=document.createElement('script');s.src='script.js';document.body.appendChild(s)"></script>
 </body>
