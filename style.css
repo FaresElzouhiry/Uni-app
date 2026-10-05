@@ -1,6 +1,6 @@
 /* Student Portal — style.css (v15). Black / white / red, Outfit. One file, no stacked overrides. */
 :root{--tx:#fff;--n:#18181b;--bg:#0a0a0a;--s1:#141417;--s2:#1f1f23;--navy:#171717;--coral:#e5202e;--c2:#fff;--c2t:#111;--mu:#9b9ba4;--line:#27272c;--r:20px;
-  --tint:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0) 60%)}
+  --tint:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 62%)}
 :root[data-theme=light]{--bg:#fff;--s1:#f5f5f6;--s2:#ebebed;--navy:#f1f1f1;--n:#f0f0f0;--tx:#111;--c2:#111;--c2t:#fff;--mu:#6a6a72;--line:#e3e3e6}
 
 *{box-sizing:border-box;margin:0;scrollbar-width:none;-webkit-tap-highlight-color:transparent}
@@ -235,33 +235,36 @@ dialog .chips2 label.chip{display:block;position:relative;margin:0}
 .live-counter-box{background:#1a1a2e;padding:12px 16px;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:16px;color:#fff}
 .live-dot{width:8px;height:8px;background:#06d6a0;border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-/* ---------- translucent muted course cards ---------- */
+/* ---------- dark muted cards with colour accent bar ---------- */
 .ev,.oc .bd,.dhead{
-  color:#fff;
-  background:
-    linear-gradient(120deg,
-      color-mix(in srgb,var(--a) 50%,transparent),
-      color-mix(in srgb,var(--b) 50%,transparent));
-  border:1px solid color-mix(in srgb,var(--a) 55%,rgba(255,255,255,.25));
-  box-shadow:0 2px 10px rgba(0,0,0,.3);
+  color:#fff !important;
+  background:linear-gradient(120deg,
+    color-mix(in srgb,var(--a) 24%,#0a0a0a),
+    color-mix(in srgb,var(--b) 24%,#0a0a0a)) !important;
+  border:1px solid color-mix(in srgb,var(--a) 35%,transparent) !important;
+  border-left:5px solid var(--a) !important;
+  box-shadow:none !important;
 }
-.ev b,.oc .bd b,.dhead h3{color:#fff}
-.ev small,.oc small,.dhead small{color:rgba(255,255,255,.78);opacity:1}
-.ev em,.oc em{background:rgba(255,255,255,.14);color:#fff}
+.ev b,.oc .bd b,.dhead h3{color:#fff !important}
+.ev small,.oc small,.dhead small{color:rgba(255,255,255,.62) !important;opacity:1 !important}
+.ev em,.oc em{
+  background:color-mix(in srgb,var(--a) 28%,transparent) !important;
+  color:#fff !important;
+}
 
-/* time + room on ONE line */
-.ev{flex-direction:row;flex-wrap:wrap;align-content:flex-start;column-gap:6px;row-gap:0}
-.ev b{flex:0 0 100%;font-size:16px}
-.ev .tm{flex:none;display:flex;gap:6px}
-.ev .rm{margin:0;padding:0;flex:1;min-width:0}
-.ev .rm:not(:empty)::before{content:"· "}
-
-/* white theme: darken so white text stays readable */
+/* white theme */
 :root[data-theme=light] .ev,
 :root[data-theme=light] .oc .bd,
 :root[data-theme=light] .dhead{
   background:linear-gradient(120deg,
-    color-mix(in srgb,var(--a) 65%,#000),
-    color-mix(in srgb,var(--b) 65%,#000));
+    color-mix(in srgb,var(--a) 18%,#fff),
+    color-mix(in srgb,var(--b) 18%,#fff)) !important;
+  color:#111 !important;
 }
+:root[data-theme=light] .ev b,
+:root[data-theme=light] .oc .bd b,
+:root[data-theme=light] .dhead h3{color:#111 !important}
+:root[data-theme=light] .ev small,
+:root[data-theme=light] .oc small,
+:root[data-theme=light] .dhead small{color:rgba(0,0,0,.6) !important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
