@@ -116,20 +116,14 @@ main.in{animation:pgin .38s cubic-bezier(.2,.8,.2,1) both}
 .pill{flex:none;padding:7px 15px;border-radius:999px;background:var(--coral);color:#fff;font-size:14px;font-weight:600}
 
 /* ---------- schedule ---------- */
-#schedule:not([hidden]){display:flex;flex-direction:column;height:calc(100dvh - 92px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
-.wk{flex:none;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain}
-.w{flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-.wk button{padding:8px 0;border-radius:14px;color:var(--mu);font-size:14px}
-.wk b{display:block;font-size:24px;font-weight:700;margin-top:4px}
-.wk .tod:not(.on) b{color:var(--coral)}
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.wk button{padding:8px 0;border-radius:14px;color:var(--mu);font-size:15px}
+.wk b{display:block;font-size:26px;font-weight:700;margin-top:6px}
 .wk .on{background:var(--coral);color:#fff}
-.dsum{flex:none;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 10px;padding:10px 4px 0;font-size:13.5px;color:var(--mu)}
-.dsum b{font-size:16px;color:var(--tx)}
-.tlw{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:6px;padding:24px 0;touch-action:pan-y}
-.tl{position:relative;margin:0 0 0 58px;border-left:2px solid var(--line)}
+.tl{position:relative;margin:22px 0 0 58px;border-left:2px solid var(--line)}
 .hr{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
 .hr span{position:absolute;right:calc(100% + 8px);top:-11px;color:var(--mu);font-size:15px;white-space:nowrap}
-.now{position:absolute;left:-6px;right:0;z-index:3;border-top:2px solid var(--coral);pointer-events:none;box-shadow:0 0 8px var(--coral)}
+.now{position:absolute;left:-6px;right:0;border-top:2px solid var(--coral);pointer-events:none}
 .now::before{content:"";position:absolute;left:-2px;top:-7px;width:12px;height:12px;border-radius:50%;background:var(--coral)}
 
 /* events: SOLID course colour (covers the grid lines), big name, time + type, room pinned to the bottom */
