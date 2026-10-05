@@ -106,10 +106,6 @@ function renderAbout(){
   $('#fbtxt').value=S.fb.c||'';paintStars();
 }
 $('#fbtxt').oninput=e=>{S.fb.c=e.target.value;save()};
-$('#share').onclick=async()=>{
-  const u=location.origin+location.pathname.replace(/index\.html$/,'');
-  try{if(navigator.share)await navigator.share({title:'Uni Hub',text:'My university schedule, in one app',url:u});else{await navigator.clipboard.writeText(u);toast('Link copied')}}catch(e){}
-};
 
 /* feedback AND the visit counter → your Google Sheet (see apps-script/Code.gs). Paste your /exec URL here. */
 const FEEDBACK_URL='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';

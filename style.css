@@ -1,6 +1,6 @@
 /* Student Portal — style.css (v15). Black / white / red, Outfit. One file, no stacked overrides. */
 :root{--tx:#fff;--n:#18181b;--bg:#0a0a0a;--s1:#141417;--s2:#1f1f23;--navy:#171717;--coral:#e5202e;--c2:#fff;--c2t:#111;--mu:#9b9ba4;--line:#27272c;--r:20px;
-  --tint:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 62%)}
+  --tint:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0) 60%)}
 :root[data-theme=light]{--bg:#fff;--s1:#f5f5f6;--s2:#ebebed;--navy:#f1f1f1;--n:#f0f0f0;--tx:#111;--c2:#111;--c2t:#fff;--mu:#6a6a72;--line:#e3e3e6}
 
 *{box-sizing:border-box;margin:0;scrollbar-width:none;-webkit-tap-highlight-color:transparent}
@@ -241,5 +241,14 @@ dialog .chips2 label.chip{display:block;position:relative;margin:0}
 .live-counter-box{background:#1a1a2e;padding:12px 16px;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:16px;color:#fff}
 .live-dot{width:8px;height:8px;background:#06d6a0;border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-
+/* ---------- dark professional course colours (CSS only) ---------- */
+.ev,.oc .bd,.dhead{
+  --d1:color-mix(in srgb,var(--a) 55%,#000);
+  --d2:color-mix(in srgb,var(--b) 55%,#000);
+  color:#fff;
+  background:var(--tint),linear-gradient(120deg,var(--d1),var(--d2));
+}
+.ev{box-shadow:0 2px 8px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08)}
+.ev small,.oc small,.dhead small{opacity:.85}
+.ev em,.oc em{background:rgba(255,255,255,.16)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
