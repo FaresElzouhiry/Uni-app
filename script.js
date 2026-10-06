@@ -535,3 +535,31 @@ if(saved){
 
 /* offline support: service-worker.js keeps the app on the phone (a new version is used the next time the app opens) */
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(e=>console.log('Service Worker failed:',e)));
+/* ---------- install banner ---------- */
+(function(){
+  const box=$('#inst'),go=$('#instgo'),x=$('#instx'),KEY='portal:instx';
+  const standalone=()=>matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone;
+  const ua=navigator.userAgent;
+  const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  let ev=null;
+  const dismissed=()=>{try{return Date.now()-(+localStorage.getItem(KEY)||0)<7*864e5}catch(e){return false}};
+  const hide=()=>{box.hidden=true};
+  const show=()=>{if(!standalone()&&!dismissed())box.hidden=false};
+
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;show()});   // Chrome / Edge / Samsung
+  addEventListener('appinstalled',()=>{hide();ev=null;toast('Installed ✓')});
+  if(ios)setTimeout(show,1500);                                                  // Safari: no event, show guide
+
+  x.onclick=()=>{hide();try{localStorage.setItem(KEY,Date.now())}catch(e){}};
+  go.onclick=async()=>{
+    if(ev){ev.prompt();await ev.userChoice.catch(()=>{});ev=null;hide();return}
+    const d=$('#dlg'),f=d.querySelector('form');
+    const h=mk('h3','','Install Uni Hub'),p=mk('p','',ios
+      ?'1) Tap the Share button in Safari (square with an arrow).\n2) Scroll and tap "Add to Home Screen".\n3) Tap "Add".'
+      :'Open your browser menu (⋮) and tap "Install app" or "Add to Home screen".');
+    p.style.whiteSpace='pre-line';
+    const ok=mk('button','ok','Got it');ok.value='no';
+    const b=mk('div','btns');b.append(ok);
+    d.onclose=null;d.oncancel=null;d.returnValue='';f.replaceChildren(h,p,b);d.showModal();
+  };
+})();
