@@ -1,7 +1,7 @@
 /* Student Portal — service worker: the app opens instantly and works with NO internet.
    Put this file next to index.html. Whenever you upload new files, change CACHE_VERSION (v5 → v6 …)
    so every phone downloads the new version. */
-const CACHE_VERSION = 'v43';
+const CACHE_VERSION = 'v44';
 const CACHE = 'portal-' + CACHE_VERSION;
 
 // Everything the app needs. Both layouts are listed (all files in one folder, or css/ js/ data/ folders);
