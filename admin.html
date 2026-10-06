@@ -20,6 +20,7 @@ h1{color:#e63946;margin-bottom:20px}
     <div class="card"><div class="num" id="live">-</div><div class="label">Live Now (5 min)</div></div>
     <div class="card"><div class="num" id="today">-</div><div class="label">Today</div></div>
     <div class="card"><div class="num" id="total">-</div><div class="label">Total Visits</div></div>
+    <div class="card"><div class="num" id="installs">-</div><div class="label">Installs</div></div>
 </div>
 <button class="refresh" onclick="load()">🔄 Refresh</button>
 <button class="refresh" onclick="resetStats()" style="background:#555;margin-right:8px;">🗑 Reset</button>
@@ -44,6 +45,7 @@ function load() {
             document.getElementById('live').textContent = s.live;
             document.getElementById('today').textContent = s.today;
             document.getElementById('total').textContent = s.total;
+            document.getElementById('installs').textContent = s.installs || 0;
         })
         .catch(() => alert('Error loading stats'));
 }
