@@ -503,7 +503,13 @@ async function fetchData(){
 const CID=(()=>{try{let c=localStorage.getItem('portal:cid');if(!c){c=crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('portal:cid',c)}return c}catch(e){return 'anon'}})();
 let lastSent=0;
 function track(type){
-  if(!FEEDBACK_URL||FEEDBACK_URL.startsWith('PASTE')||['localhost','127.0.0.1'].includes(location.hostname))return;   // your own testing on Live Server isn't counted
+  // لو إنت فاتح من لينك ?admin=1، أو الجهاز ده متسجل admin، متسجلش
+  if(localStorage.getItem('isAdmin')==='1'||new URLSearchParams(location.search).get('admin')==='1'){
+    localStorage.setItem('isAdmin','1'); // احفظ إن الجهاز ده admin
+    return;
+  }
+  
+  if(!FEEDBACK_URL||FEEDBACK_URL.startsWith('PASTE')||['localhost','127.0.0.1'].includes(location.hostname))return;
   const ua=navigator.userAgent,inApp=matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone;
   lastSent=Date.now();
   fetch(FEEDBACK_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},
