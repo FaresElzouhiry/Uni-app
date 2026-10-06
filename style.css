@@ -148,7 +148,12 @@ main.in{animation:pgin .38s cubic-bezier(.2,.8,.2,1) both}
 .ev.sm b{-webkit-line-clamp:1;font-size:14px}
 .ev.sm small{font-size:11.5px;line-height:1.25}
 .ev.sm .rm{padding-top:0}
-.ev.xs{justify-content:center}.ev.xs .tm{display:none}.ev.xs .rm{margin-top:0}
+.ev em:empty,.oc em:empty{display:none}
+.ev.xs{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"c c" "t r";align-content:center;gap:0 8px;padding:1px 10px 1px 15px}
+.ev.xs b{grid-area:c;font-size:14px;line-height:1.15}
+.ev.xs .tm{grid-area:t;justify-content:flex-start;gap:6px;min-width:0;overflow:hidden;font-size:11px}
+.ev.xs .tm span{white-space:nowrap}
+.ev.xs .rm{grid-area:r;margin:0;padding:0;font-size:11px}
 
 /* ---------- other schedules ---------- */
 .pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:2px 0 12px}

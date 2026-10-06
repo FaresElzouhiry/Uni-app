@@ -351,7 +351,7 @@ function renderTimeline(focus){
   evs.forEach(e=>{
     const i=info(e.course),own=!!e.date,s=mins(e.start),f=mins(e.end),hp=Y(f-s)-2,cl=own?['#e5202e']:i.colors;
     const el=fill(tpl('t-event'),{course:i.name,time:`${clock(e.start)} – ${clock(e.end)}`,title:e.title,room:e.room});
-    el.classList.toggle('own',own);el.classList.toggle('sm',hp<96);el.classList.toggle('xs',hp<50);
+    el.classList.toggle('own',own);el.classList.toggle('sm',hp<96);el.classList.toggle('xs',hp<56);
     el.style.cssText=`top:${Y(s-HOUR0*60)+1}px;height:${hp}px;--a:${cl[0]};--b:${cl[cl.length-1]};--fg:${fg(cl)}`;
     el.onclick=()=>own?ask('Delete event?',[],e.course).then(r=>{if(r){S.mine=S.mine.filter(x=>x!==e);save();renderTimeline()}}):detail(e);
     tl.append(el);
