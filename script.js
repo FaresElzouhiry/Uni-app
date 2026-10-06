@@ -7,7 +7,7 @@ const clock=t=>{const[h,m]=t.split(':');return (h%12||12)+':'+m+(h<12?' AM':' PM
 const p2=n=>String(n).padStart(2,'0');
 const hm=m=>p2(Math.floor(m/60))+':'+p2(m%60);                                   // 585 → "09:45"
 const dur=m=>{const h=Math.floor(m/60),r=m%60;return h?(r?`${h}h ${r}m`:`${h}h`):`${r} min`};
-const HOUR0=8,SHOW_END=17,END_H=22,W0=26;    // timeline runs 8 AM → 10 PM; the screen fits 8 AM → 5 PM, later hours need a scroll
+const HOUR0=8,SHOW_END=15,END_H=22,W0=26;    // timeline runs 8 AM → 10 PM; the screen fits 8 AM → 5 PM, later hours need a scroll
 let PH=60;                                   // pixels per hour — recalculated in renderTimeline() so 8 AM–5 PM always fits the screen
 const Y=m=>m*PH/60;
 const GREY='#94a3b8';
