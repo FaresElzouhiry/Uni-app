@@ -569,3 +569,21 @@ if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWor
     d.onclose=null;d.oncancel=null;d.returnValue='';f.replaceChildren(h,p,b);d.showModal();
   };
 })();
+// ============ تتبع التثبيت ============
+window.addEventListener('appinstalled', () => {
+  fetch(FEEDBACK_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      type: 'install',
+      id: CID,
+      device: /Android/.test(navigator.userAgent) ? 'Android' :
+              /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iOS' :
+              /Windows/.test(navigator.userAgent) ? 'Windows' : 'Other',
+      source: 'PWA',
+      group: S.group || '',
+      section: S.section || ''
+    })
+  }).catch(() => {});
+});
