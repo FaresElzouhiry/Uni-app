@@ -253,14 +253,14 @@ function renderHome(){
   $('#gchip').textContent=S.group&&S.section?`Group ${S.group} · Section ${S.section}`:'';
   $('#ini').textContent=(S.name||'?').trim().charAt(0).toUpperCase();
   $('#wn').textContent=S.name||'';$('#wg').textContent=S.group?`Group ${S.group} · Section ${S.section||'–'}`:'';
-  const s0=new Date(n.getFullYear(),n.getMonth(),n.getDate()-(n.getDay()+1)%7),s1=new Date(s0);
-  s1.setDate(s0.getDate()+7);
-  const c=D.exams.filter(e=>{const d=new Date(e.date+'T00:00');return d>=s0&&d<s1}).length,open=S.tasks.filter(t=>!t.done).length;
-  $('#exs').textContent=c?`${c} this week`:'None this week';
+  const open=S.tasks.filter(t=>!t.done).length;
+  const tm=new Date(n);tm.setDate(n.getDate()+1);const te=eventsOn(tm);
+  $('#tmn').textContent=te.length?`${te.length} ${te.length>1?'classes':'class'} · from ${clock(te[0].start)}`:'No classes · day off';
   $('#tkn').textContent=open?`${open} open`:S.tasks.length?'All done':'Add your first';
   renderLive();notifs();
 }
 setInterval(()=>{if(D&&view==='home')renderLive()},30000);
+$('#tmr').onclick=()=>{const d=new Date();d.setDate(d.getDate()+1);sel=d;go('schedule')};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&D&&view==='home')renderLive()});
 
 /* ---------- OTHER SCHEDULES ---------- */
