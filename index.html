@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=3" onerror="this.onerror=null;this.href='style.css?v=3'"><meta name="theme-color" content="#0a0a0a">
+<link rel="stylesheet" href="css/study.css?v=1" onerror="this.onerror=null;this.href='study.css?v=1'">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -87,7 +88,7 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
       <div class="tiles">
         <button data-view="tasks"><span class="ic" data-svg="tasks"></span><b>Tasks</b><small id="tkn"></small></button>
         <button data-view="others"><span class="ic" data-svg="others"></span><b>Other schedules</b><small>Any group, any section</small></button>
-        <button id="tmr" type="button"><span class="ic" data-svg="schedule"></span><b>Tomorrow</b><small id="tmn"></small></button>
+        <button data-view="study"><span class="ic" data-svg="study"></span><b>Study Rooms</b><small id="stn">Focus &amp; compete</small></button>
       </div>
 
       <div class="hd"><h2>Today</h2><small id="tsum"></small></div>
@@ -170,5 +171,6 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
 <template id="t-oc"><article class="oc"><div class="tm2"><b data-f="s"></b><small data-f="e"></small></div><div class="bd"><b data-f="course"></b><div class="meta"><em data-f="title"></em><em data-f="len"></em><span data-f="room"></span></div><small data-f="staff"></small></div></article></template>
 
 <script src="js/script.js" onerror="var s=document.createElement('script');s.src='script.js';document.body.appendChild(s)"></script>
+<script src="js/study.js?v=1" onerror="var s=document.createElement('script');s.src='study.js?v=1';document.body.appendChild(s)"></script>
 </body>
 </html>

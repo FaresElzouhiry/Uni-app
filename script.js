@@ -11,7 +11,7 @@ const HOUR0=8,SHOW_END=17,END_H=22,W0=26;    // timeline runs 8 AM → 10 PM; th
 let PH=60;                                   // pixels per hour — recalculated in renderTimeline() so 8 AM–5 PM always fits the screen
 const Y=m=>m*PH/60;
 const GREY='#94a3b8';
-const TITLES={home:'Portal',grades:'Grades',schedule:'Schedule',attendance:'Attendance',staff:'Contact Staff',transcript:'Transcript',evaluate:'Evaluate',sis:'SIS',others:'Other Schedules',settings:'Settings',tasks:'Tasks',exams:'Exams',dev:'About'};
+const TITLES={home:'Portal',grades:'Grades',schedule:'Schedule',attendance:'Attendance',staff:'Contact Staff',transcript:'Transcript',evaluate:'Evaluate',study:'Study Rooms',sis:'SIS',others:'Other Schedules',settings:'Settings',tasks:'Tasks',exams:'Exams',dev:'About'};
 const fresh=()=>({mine:[],seen:[],tasks:[],fb:{r:0,c:''},oth:{g:0,s:0}});
 const app=$('#app'),menu=$('#menu'),scrim=$('#scrim');
 let D,view='home',sel=new Date(),base,S=fresh();
@@ -24,6 +24,7 @@ const IC={
   home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/>',
   grades:'<path d="M5 20v-9M12 20V4M19 20v-6"/>',
   schedule:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  study:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M9.5 3h5M12 3v3"/>',
   others:'<circle cx="9" cy="8.5" r="3.2"/><path d="M3 20c0-3.4 2.6-5.4 6-5.4s6 2 6 5.4"/><path d="M16 5.6a3.1 3.1 0 0 1 0 5.8M18 14.9c1.9.7 3 2.4 3 5.1"/>',
   attendance:'<circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6"/>',
   staff:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="m3.5 7.5 8.5 6 8.5-6"/>',
@@ -185,12 +186,12 @@ function settings(){
 function show(v){
   if(v!==view)$('main').scrollTop=0;
   view=v;
-  const sec=['home','schedule','dev','others'].includes(v)?v:['settings','tasks','exams'].includes(v)?'page':'wip';
+  const sec=['home','schedule','dev','others','study'].includes(v)?v:['settings','tasks','exams'].includes(v)?'page':'wip';
   $$('.view').forEach(s=>s.hidden=s.id!==sec);
   $$('#menu [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   $('#title').textContent=TITLES[v];$('#act').hidden=v!=='schedule';app.classList.remove('open');
   if(sec==='wip'){$('#wipt').textContent=TITLES[v]||'';$('#wipi').innerHTML=svg(IC[v]?v:'about')}
-  if(v==='home')renderHome();else if(v==='schedule')renderSchedule();else if(v==='settings')settings();else if(v==='tasks')tasks();else if(v==='exams')exams();else if(v==='dev')renderAbout();else if(v==='others')fillOthers();
+  if(v==='home')renderHome();else if(v==='schedule')renderSchedule();else if(v==='settings')settings();else if(v==='tasks')tasks();else if(v==='exams')exams();else if(v==='dev')renderAbout();else if(v==='others')fillOthers();else if(v==='study'&&window.Study)Study.open();
 }
 
 /* ---------- HOME ---------- */
@@ -254,13 +255,11 @@ function renderHome(){
   $('#ini').textContent=(S.name||'?').trim().charAt(0).toUpperCase();
   $('#wn').textContent=S.name||'';$('#wg').textContent=S.group?`Group ${S.group} · Section ${S.section||'–'}`:'';
   const open=S.tasks.filter(t=>!t.done).length;
-  const tm=new Date(n);tm.setDate(n.getDate()+1);const te=eventsOn(tm);
-  $('#tmn').textContent=te.length?`${te.length} ${te.length>1?'classes':'class'} · from ${clock(te[0].start)}`:'No classes · day off';
+  if(window.Study)Study.tile();
   $('#tkn').textContent=open?`${open} open`:S.tasks.length?'All done':'Add your first';
   renderLive();notifs();
 }
 setInterval(()=>{if(D&&view==='home')renderLive()},30000);
-$('#tmr').onclick=()=>{const d=new Date();d.setDate(d.getDate()+1);sel=d;go('schedule')};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&D&&view==='home')renderLive()});
 
 /* ---------- OTHER SCHEDULES ---------- */

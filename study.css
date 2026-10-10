@@ -1,0 +1,73 @@
+/* Study Rooms — study.css (v1). Uses the portal's own theme variables (--coral, --s1, --s2, --line, --mu, --tx, --bg), so Black and White themes both work. */
+
+/* tabs */
+.st-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;margin:2px 0 14px;border-radius:16px;background:var(--s1);border:1px solid var(--line)}
+.st-tabs button{padding:10px 0;border-radius:12px;font-size:15px;font-weight:600;color:var(--mu);transition:background .15s,color .15s}
+.st-tabs .on{background:var(--coral);color:#fff}
+
+/* the room */
+.st-card{display:grid;justify-items:center;gap:14px;padding:18px 16px;border-radius:26px;background:var(--s1);border:1px solid var(--line);transition:border-color .3s,box-shadow .3s}
+.st-card.run{border-color:var(--coral);box-shadow:0 0 0 3px rgba(229,32,46,.14),0 12px 30px rgba(229,32,46,.18)}
+.st-card.brk{border-color:var(--tx)}
+.st-top{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:28px}
+.st-kind{font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;border:1px solid var(--line);color:var(--mu)}
+.run .st-kind{background:var(--coral);border-color:var(--coral);color:#fff}
+.brk .st-kind{background:var(--tx);border-color:var(--tx);color:var(--bg)}
+.st-live{color:var(--mu);font-size:13px}
+.st-live:empty{display:none}
+
+.st-ring{position:relative;width:min(62vw,240px);aspect-ratio:1}
+.st-ring svg{display:block;width:100%;height:100%}
+.st-ring circle{fill:none;stroke-width:8}
+.st-ring .bg{stroke:var(--s2)}
+.st-ring .fg{stroke:var(--coral);stroke-linecap:round;stroke-dasharray:339.292;stroke-dashoffset:339.292;transition:stroke-dashoffset 1s linear,stroke .3s}
+.brk .st-ring .fg{stroke:var(--tx)}
+.st-clock{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;text-align:center;padding:0 22px}
+.st-clock b{font-size:clamp(40px,13vw,56px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.st-clock small{max-width:100%;color:var(--mu);font-size:13px;line-height:1.25}
+
+.st-dots{display:flex;gap:8px;height:10px}
+.st-dots i{width:10px;height:10px;border-radius:50%;background:var(--s2);border:1.5px solid var(--line)}
+.st-dots .d{background:var(--coral);border-color:var(--coral)}
+.st-dots .a{border-color:var(--coral)}
+
+.st-card .sel{width:100%}
+.sel select:disabled{opacity:.55;cursor:default}
+.st-btns{display:grid;gap:8px;width:100%}
+.st-btns .cta,.st-btns .cta.ghost{margin-top:0}
+
+/* numbers */
+.st-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 2px}
+.st-stats div{display:grid;gap:2px;padding:12px;border-radius:18px;background:var(--s1);border:1px solid var(--line)}
+.st-stats b{font-size:20px;line-height:1.1}
+.st-stats small{color:var(--mu);font-size:12.5px}
+.st-l{cursor:default}
+.st-l .pill{min-width:54px}
+
+/* leaderboard */
+.lb-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:2px 2px 12px}
+.lb-head b{display:block;font-size:18px}
+.lb-head small{color:var(--mu);font-size:13px}
+.lb-head .pillo:disabled{opacity:.5}
+.st-seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.st-seg button{padding:9px 0;border-radius:12px;border:1px solid var(--line);background:var(--s1);color:var(--mu);font-size:14px;font-weight:600}
+.st-seg .on{border-color:var(--coral);background:rgba(229,32,46,.13);color:var(--tx)}
+.lb-r{cursor:default;padding:10px 12px}
+.lb-r .rk{flex:none;width:30px;text-align:center;font-size:19px;font-weight:700;color:var(--mu)}
+.lb-r .bell{font-weight:700;color:var(--tx)}
+.lb-r b{-webkit-line-clamp:1}
+.lb-r small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-r .v{flex:none;font-size:16px;font-weight:700;white-space:nowrap}
+.lb-r.me{border-color:var(--coral);background:linear-gradient(135deg,rgba(229,32,46,.16),transparent 70%),var(--s1)}
+.lb-r.me .bell{background:var(--coral);color:#fff}
+.lb-you{margin-top:10px;padding:12px 14px;border-radius:16px;border:1.5px solid var(--coral);background:rgba(229,32,46,.1);font-size:14.5px;font-weight:600;text-align:center}
+
+/* floating timer, shown on every other page while a session runs */
+.st-pill{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:1;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:9px 16px;border-radius:999px;background:var(--coral);color:#fff;white-space:nowrap;
+  box-shadow:0 8px 24px rgba(229,32,46,.45);font-weight:700;font-variant-numeric:tabular-nums;transition:transform .12s}
+.st-pill:active{transform:translateX(-50%) scale(.97)}
+.st-pill small{min-width:0;max-width:130px;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:600;opacity:.9}
+.st-pill .dot{flex:none;width:8px;height:8px;border-radius:50%;background:#fff;animation:st-pulse 2s infinite}
+.st-pill.brk{background:var(--tx);color:var(--bg);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.st-pill.brk .dot{background:var(--bg)}
+@keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.3}}
