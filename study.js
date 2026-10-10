@@ -365,7 +365,6 @@ function build() {
       </div>
       <div id="lb-list" class="list"></div>
       <div id="lb-me"></div>
-      <p class="lead">Ranking counts finished focus sessions only, from Saturday to Friday. Only your first name is shown.</p>
     </div>`;
   main.append(sec);
 
