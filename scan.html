@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="noindex">
+<title>Check in</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--card:#141417;--line:#27272c;--tx:#fff;--mu:#9b9ba4;--red:#e5202e;--ok:#18b26b;--info:#e0a800}
+:root[data-theme=light]{--bg:#fff;--card:#f5f5f6;--line:#e3e3e6;--tx:#111;--mu:#6a6a72}
+*{box-sizing:border-box;margin:0}
+html,body{min-height:100%}
+body{font:500 17px/1.45 Outfit,system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+main{width:100%;max-width:440px;display:grid;gap:14px;align-content:start}
+h1{font-size:26px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:12px}
+.card p{color:var(--mu);font-size:15px}
+.tag{display:inline-block;justify-self:start;font-size:14px;font-weight:600;padding:4px 12px;border-radius:999px;border:1px solid var(--line);color:var(--mu)}
+input{font:inherit;font-size:22px;font-weight:600;text-align:center;letter-spacing:2px;padding:14px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:var(--tx);width:100%}
+input:focus{outline:none;border-color:var(--red)}
+button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:14px;background:var(--red);color:#fff;cursor:pointer;width:100%}
+button:disabled{opacity:.6}
+:is(button,input):focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.res{text-align:center;justify-items:center;padding:28px 18px}
+.res svg{width:58px;height:58px}
+.res h2{font-size:22px;font-weight:700}
+.res.ok{border-color:var(--ok)}.res.ok svg{color:var(--ok)}
+.res.bad{border-color:var(--red)}.res.bad svg{color:var(--red)}
+.res.info{border-color:var(--info)}.res.info svg{color:var(--info)}
+.err{color:var(--red)!important;min-height:1.2em}
+.spin{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--red);border-radius:50%;animation:s .8s linear infinite;margin:auto}
+@keyframes s{to{transform:rotate(360deg)}}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Attendance</h1>
+  <span class="tag" id="tag" hidden></span>
+
+  <section id="busy" class="card" hidden><div class="spin"></div><p style="text-align:center">Checking you in...</p></section>
+
+  <!-- First time on this device: enter the student ID once -->
+  <section id="idBox" class="card" hidden>
+    <b>Enter your student ID</b>
+    <p>You only do this once. This device is then linked to your ID, and next time you are checked in automatically.</p>
+    <input id="idIn" inputmode="numeric" autocomplete="off" placeholder="Student ID">
+    <p class="err" id="idErr"></p>
+    <button id="idGo">Check in</button>
+  </section>
+
+  <section id="res" class="card res" hidden>
+    <span id="rIc"></span><h2 id="rT"></h2><p id="rS"></p>
+    <button id="rBtn" hidden>Try again</button>
+  </section>
+</main>
+
+<script>
+/* ============ Settings ============ */
+const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';   // your Apps Script /exec URL
+
+/* ============ Helpers ============ */
+const $=s=>document.querySelector(s);
+const LS={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+try{if(JSON.parse(LS.get('st')).theme==='light')document.documentElement.dataset.theme='light'}catch(e){}
+const ICON={
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6"/></svg>',
+  bad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.01"/></svg>'
+};
+
+/* Same keys as the PWA: a student who set up in the app is already set up here (same browser) */
+const DEV=LS.get('att:dev')||(()=>{
+  const r=crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):Date.now().toString(36)+Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,12);
+  const d='D'+r;LS.set('att:dev',d);return d})();
+const norm=s=>String(s).replace(/[\u0660-\u0669]/g,c=>c.charCodeAt(0)-0x660).replace(/[\u06F0-\u06F9]/g,c=>c.charCodeAt(0)-0x6F0).replace(/[^0-9A-Za-z_-]/g,'');
+const post=async o=>(await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)})).json();
+const box=id=>['busy','idBox','res'].forEach(b=>$('#'+b).hidden=b!==id);
+
+/* ============ Read the QR link: ?session=XYZ&subject=Math&group=1 ============ */
+const q=new URLSearchParams(location.search);
+const P={session:q.get('session')||'',subject:q.get('subject')||'',group:q.get('group')||''};
+
+function result(kind,title,sub,retry){
+  box('res');$('#res').className='card res '+kind;
+  $('#rIc').innerHTML=ICON[kind];$('#rT').textContent=title;$('#rS').textContent=sub||'';
+  $('#rBtn').hidden=!retry;$('#rBtn').onclick=retry||null;
+}
+
+/* ============ Submit ============ */
+async function submit(id){
+  box('busy');
+  try{
+    const r=await post({type:'attend',id,device:DEV,...P});
+    if(r.ok){
+      LS.set('att:id',id);
+      const first=(r.name||'').split(' ')[0];
+      result('ok',first?`Checked in, ${first}`:'Checked in',`${r.subject} - Group ${r.group}`);
+    }else if(r.code==='ALREADY'){
+      LS.set('att:id',id);result('info','Already checked in',r.msg);
+    }else if(r.code==='UNKNOWN_ID'){
+      LS.del('att:id');askId(r.msg);                       // nothing was linked: let the student fix the ID
+    }else{
+      result('bad','Check-in failed',r.msg||'Something went wrong.',['BAD'].includes(r.code)?()=>submit(id):null);
+    }
+  }catch(e){result('bad','No internet connection','Check your connection and try again.',()=>submit(id))}
+}
+
+/* ============ First time: ask for the ID ============ */
+function askId(err){
+  box('idBox');$('#idErr').textContent=err||'';setTimeout(()=>$('#idIn').focus(),50);
+  const go=()=>{const id=norm($('#idIn').value);if(id.length<3){$('#idErr').textContent='Enter your student ID.';return}submit(id)};
+  $('#idGo').onclick=go;$('#idIn').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+
+/* ============ Start ============ */
+if(!P.session||!P.subject||!P.group){
+  result('bad','Invalid QR code','Scan the QR code on your doctor\'s screen again.');
+}else{
+  $('#tag').textContent=`${P.subject} - Group ${P.group}`;$('#tag').hidden=false;
+  const id=LS.get('att:id');
+  if(id)submit(id);                                        // already set up: check in instantly, no form
+  else askId();                                            // first time: ask for the ID once
+}
+</script>
+</body>
+</html>

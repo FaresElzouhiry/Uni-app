@@ -182,16 +182,125 @@ function settings(){
     info_,
     item({svg:'trash',t:'Reset saved data',s:'Events, read notifications and tasks (name, group and section stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,section:S.section,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
 }
+/* ---------- ATTENDANCE (student) ---------- */
+const Att=(()=>{
+  const KID='att:id',KDEV='att:dev',KSUB='att:subjects';          // same keys as scan.html
+  const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+  const dev=()=>{let d=lg(KDEV);if(!d){d='D'+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):Date.now().toString(36)+Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,12));ls(KDEV,d)}return d};
+  const norm=s=>String(s).replace(/[\u0660-\u0669]/g,c=>c.charCodeAt(0)-0x660).replace(/[^0-9A-Za-z_-]/g,'');
+  const post=async o=>(await fetch(FEEDBACK_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)})).json();
+  const getJ=async p=>(await fetch(FEEDBACK_URL+'?'+new URLSearchParams(p))).json();
+  const loadQR=()=>window.Html5Qrcode?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';s.onload=ok;s.onerror=no;document.head.append(s)});
+  const put=(...n)=>$('#att').replaceChildren(...n);
+  const card=(...n)=>{const c=mk('div','attc');c.append(...n);return c};
+  const btn=(txt,fn,c='cta')=>{const b=mk('button',c,txt);b.onclick=fn;return b};
+  const back=()=>btn('Back',home,'cta ghost');
+  let scanner=null;
 
+  async function stop(){if(!scanner)return;const s=scanner;scanner=null;try{await s.stop()}catch(e){}try{s.clear()}catch(e){}}
+  function open(){stop();lg(KID)?home():setup()}
+
+  /* first time: ID once, linked to this device for good */
+  function setup(err){
+    const inp=mk('input');inp.placeholder='Student ID';inp.inputMode='numeric';inp.autocomplete='off';
+    const msg=mk('p','amsg',err||''),go=btn('Save my ID',async()=>{
+      const id=norm(inp.value);if(id.length<3){msg.textContent='Enter your student ID.';return}
+      go.disabled=true;go.textContent='Checking...';
+      try{const r=await post({type:'register',id,device:dev()});
+        if(r.ok){ls(KID,id);toast('Saved'+(r.name?', '+r.name.split(' ')[0]:''));home()}
+        else{msg.textContent=r.msg||'Could not save your ID.';go.disabled=false;go.textContent='Save my ID'}
+      }catch(e){msg.textContent='No internet connection.';go.disabled=false;go.textContent='Save my ID'}
+    });
+    put(card(mk('h3','','Set up attendance'),mk('p','','Enter your student ID once. It is linked to this device permanently.'),inp,msg,go));
+  }
+
+  /* dashboard */
+  function home(){
+    stop();
+    const a=mk('button','abig'),b=mk('button','abig');
+    a.append(mk('b','','Take Attendance'),mk('small','','Scan the QR code shown by your doctor'));
+    b.append(mk('b','','Show Attendance'),mk('small','','Your record for every subject'));
+    a.onclick=take;b.onclick=history;
+    put(mk('p','alead','Student ID '+lg(KID)),a,b);
+  }
+
+  async function subjects(){
+    let list=[];
+    try{const r=await getJ({action:'subjects'});if(r.ok){list=r.subjects;ls(KSUB,JSON.stringify(list))}}catch(e){}
+    if(!list.length)try{list=JSON.parse(lg(KSUB))||[]}catch(e){}
+    return list;
+  }
+
+  /* take attendance: choose subject, scan, send */
+  async function take(){
+    put(card(mk('div','aspin')));
+    const list=await subjects();
+    if(!list.length)return put(card(mk('p','amsg','Could not load the subjects. Check your connection.')),back());
+    const sel=mk('select');sel.append(...list.map(s=>{const o=mk('option','',s);o.value=s;return o}));
+    const lab=mk('label','','Subject');lab.append(sel);
+    const rd=mk('div');rd.id='areader';
+    const msg=mk('p','amsg');
+    const go=btn('Open camera',async()=>{
+      msg.textContent='';go.hidden=true;sel.disabled=true;
+      try{await loadQR()}catch(e){msg.textContent='Could not load the scanner. Check your connection.';go.hidden=false;sel.disabled=false;return}
+      let used=false;
+      scanner=new Html5Qrcode('areader');
+      scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async txt=>{
+        if(used)return;let p;try{p=new URL(txt).searchParams}catch(e){return}
+        const q={session:p.get('session'),subject:p.get('subject'),group:p.get('group')};
+        if(!q.session||!q.subject||!q.group)return;                 // not an attendance QR: keep scanning
+        used=true;await stop();
+        if(q.subject!==sel.value)return finish('bad','Wrong subject',`This QR is for ${q.subject}, but you selected ${sel.value}.`);
+        send(q);
+      },()=>{}).catch(()=>{msg.textContent='Camera unavailable. Allow camera access and try again.';go.hidden=false;sel.disabled=false;scanner=null});
+    });
+    put(card(mk('h3','','Take Attendance'),lab,go,rd,msg),back());
+  }
+
+  async function send(q){
+    put(card(mk('h3','','Checking you in...'),mk('div','aspin')));
+    try{
+      const r=await post({type:'attend',id:lg(KID),device:dev(),...q});
+      if(r.ok)finish('ok','Checked in',`${q.subject} - Group ${q.group}`);
+      else finish(r.code==='ALREADY'?'info':'bad',r.code==='ALREADY'?'Already checked in':'Check-in failed',r.msg);
+    }catch(e){finish('bad','No internet connection','Check your connection and scan again.')}
+  }
+  function finish(kind,title,sub){
+    const c=card(mk('span'),mk('h3','',title),mk('p','',sub||''));c.className='attc ares '+kind;
+    c.firstChild.innerHTML=svg(kind==='ok'?'ok':'about');
+    put(c,btn('Scan again',take),back());
+  }
+
+  /* show attendance: per subject, Present / Absent by date */
+  async function history(){
+    put(card(mk('div','aspin')));
+    try{
+      const r=await getJ({action:'history',id:lg(KID),device:dev()});
+      if(!r.ok)return put(card(mk('p','amsg',r.msg||'Could not load your record.')),back());
+      const subs=r.subjects.map(s=>{
+        const d=mk('details','asub'),sm=mk('summary');
+        sm.append(mk('b','',s.subject),mk('span','',`${s.present} / ${s.total} present`));d.append(sm);
+        s.sessions.forEach(x=>{
+          const row=mk('div','arow '+(x.present?'ok':'no'));
+          row.append(mk('span','',new Date(x.t).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})),mk('em','',x.present?'Present':'Absent'));
+          d.append(row)});
+        return d});
+      put(mk('p','alead',[r.name,'Group '+r.group].filter(Boolean).join(' - ')),...(subs.length?subs:[mk('p','empty','No sessions recorded yet.')]),back());
+    }catch(e){put(card(mk('p','amsg','No internet connection.')),back())}
+  }
+
+  return{open,stop};
+})();
 function show(v){
+  if(v!=='attendance')Att.stop();
   if(v!==view)$('main').scrollTop=0;
   view=v;
-  const sec=['home','schedule','dev','others','study'].includes(v)?v:['settings','tasks','exams'].includes(v)?'page':'wip';
+  const sec=['home','schedule','dev','others','study','attendance'].includes(v)?v:['settings','tasks','exams'].includes(v)?'page':'wip';
   $$('.view').forEach(s=>s.hidden=s.id!==sec);
   $$('#menu [data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
   $('#title').textContent=TITLES[v];$('#act').hidden=v!=='schedule';app.classList.remove('open');
   if(sec==='wip'){$('#wipt').textContent=TITLES[v]||'';$('#wipi').innerHTML=svg(IC[v]?v:'about')}
-  if(v==='home')renderHome();else if(v==='schedule')renderSchedule();else if(v==='settings')settings();else if(v==='tasks')tasks();else if(v==='exams')exams();else if(v==='dev')renderAbout();else if(v==='others')fillOthers();else if(v==='study'&&window.Study)Study.open();
+  if(v==='home')renderHome();else if(v==='schedule')renderSchedule();else if(v==='settings')settings();else if(v==='tasks')tasks();else if(v==='exams')exams();else if(v==='dev')renderAbout();else if(v==='others')fillOthers();else if(v==='study'&&window.Study)Study.open();else if(v==='attendance')Att.open();
 }
 
 /* ---------- HOME ---------- */
