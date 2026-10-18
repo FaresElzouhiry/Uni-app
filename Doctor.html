@@ -31,6 +31,17 @@ button:disabled{opacity:.5;cursor:default}
 .badge{font-size:14px;font-weight:700;padding:4px 14px;border-radius:999px;border:1.5px solid var(--ok);color:var(--ok)}
 .count{display:flex;align-items:baseline;gap:8px;margin:16px 0 4px}
 .count b{font-size:56px;line-height:1;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0 6px}
+.stat{background:var(--card2);border:1.5px solid transparent;border-radius:16px;padding:14px 6px;text-align:center;color:var(--tx);font:inherit;width:100%}
+.stat b{display:block;font-size:40px;line-height:1.1;font-weight:700}
+.stat span{display:block;color:var(--mu);font-size:13px;font-weight:500;line-height:1.25}
+.stat.p b{color:var(--ok)}.stat.a b{color:var(--red)}
+button.stat{cursor:pointer}
+button.stat[aria-expanded=true]{border-color:var(--red)}
+.sec{font-size:16px;font-weight:700;margin-top:16px}
+.sec small{font-weight:500;margin-left:6px}
+.it .idc{font-weight:700;min-width:64px}
+.it .nm{flex:1;text-align:left}
 .list{display:grid;gap:6px;margin-top:10px;max-height:52vh;overflow-y:auto}
 .it{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 14px;border-radius:12px;background:var(--card2)}
 .it b{font-weight:600}.it small{color:var(--mu);font-size:13px}
@@ -52,8 +63,8 @@ dialog::backdrop{background:#000d}
 <body>
 
 <section id="login" class="card" hidden>
-  <h1>Teacher Dashboard</h1>
-  <input id="keyIn" type="password" placeholder="Teacher key" autocomplete="current-password">
+  <h1>Doctor Dashboard</h1>
+  <input id="keyIn" type="password" placeholder="Doctor key" autocomplete="current-password">
   <button id="keyGo">Sign in</button>
   <p class="mu" id="loginErr"></p>
 </section>
@@ -82,7 +93,16 @@ dialog::backdrop{background:#000d}
       <button class="ghost" id="endS">End Session</button>
     </div>
     <label id="actWrap" style="margin-top:12px" hidden><span>Other active sessions</span><select id="actSel"></select></label>
-    <div class="count"><b id="cnt">0</b><span class="mu">checked in</span></div>
+    <div class="stats">
+      <div class="stat"><b id="nTotal">-</b><span>Group total</span></div>
+      <div class="stat p"><b id="cnt">0</b><span>Checked in</span></div>
+      <button class="stat a" id="absBtn" aria-expanded="false" aria-controls="absWrap"><b id="nAbs">-</b><span>Absent (tap to view)</span></button>
+    </div>
+    <div id="absWrap" hidden>
+      <h3 class="sec">Absent students <small class="mu">lowest ID first</small></h3>
+      <div class="list" id="absL"></div>
+    </div>
+    <h3 class="sec">Live feed</h3>
     <div class="list" id="feed"></div>
   </section>
 </main>
@@ -99,7 +119,7 @@ dialog::backdrop{background:#000d}
 <script>
 /* ============ Settings ============ */
 const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
-const SCAN_URL='https://juster-5zq.pages.dev/scan.html';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
+const SCAN_URL='';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
 const REFRESH_MS=5000;         // live feed polling interval
 
 /* ============ Helpers ============ */
@@ -155,7 +175,8 @@ function openSession(s){
   $('#setup').hidden=true;$('#live').hidden=false;
   $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
   $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  $('#cnt').textContent='0';$('#feed').replaceChildren(el('p','empty','Waiting for students...'));
+  $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
+  $('#feed').replaceChildren(el('p','empty','Waiting for students...'));
   const w=$('#actWrap');w.hidden=active.length<2;
   $('#actSel').replaceChildren(...active.map(a=>{const o=el('option','',`${a.subject} - Group ${a.group}`);o.value=a.id;o.selected=a.id===s.id;return o}));
   refresh();
@@ -180,6 +201,9 @@ $('#showQR').onclick=()=>{
 };
 $('#qrClose').onclick=()=>$('#qrDlg').close();
 
+/* ============ Absent list toggle ============ */
+$('#absBtn').onclick=()=>{const w=$('#absWrap'),open=w.hidden;w.hidden=!open;$('#absBtn').setAttribute('aria-expanded',open)};
+
 /* ============ Live feed: polls every 5 seconds ============ */
 async function refresh(){
   if(!SES||busy)return;busy=true;
@@ -188,7 +212,9 @@ async function refresh(){
     if(d.code==='AUTH'||d.code==='LOCKED'){store.del('tk');KEY='';return showLogin(d.msg)}
     if(!d.ok){status(d.msg||'Error');return}
     if(!d.active){status('Session ended');init();return}
-    $('#cnt').textContent=d.count;
+    $('#cnt').textContent=d.count;$('#nTotal').textContent=d.total;$('#nAbs').textContent=d.absent;
+    $('#absL').replaceChildren(...(d.absentees.length?d.absentees.map(a=>{
+      const it=el('div','it');it.append(el('b','idc',a.id),el('span','nm',a.name));return it}):[el('p','empty',d.total?'Everyone has checked in.':'No students found for this group in the Students sheet.')]));
     $('#feed').replaceChildren(...(d.feed.length?d.feed.map(x=>{
       const k=x.id+'@'+x.t,it=el('div','it'+(!firstFeed&&!seen.has(k)?' new':''));
       seen.add(k);const n=el('div');n.append(el('b','',x.name),el('br'),el('small','','ID '+x.id));
