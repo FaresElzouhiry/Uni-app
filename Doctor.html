@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Teacher Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#0a0a0a;--card:#141417;--card2:#1f1f23;--line:#27272c;--tx:#fff;--mu:#9b9ba4;--red:#e5202e;--ok:#18b26b}
+*{box-sizing:border-box;margin:0}
+body{font:500 16px/1.4 Outfit,system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:16px;display:flex;justify-content:center}
+main{width:100%;max-width:760px;display:grid;gap:14px}
+h1{font-size:26px;font-weight:700}
+h2{font-size:20px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.grow{flex:1}
+.mu{color:var(--mu);font-size:14px;font-weight:500}
+label{display:grid;gap:4px;flex:1;min-width:140px}
+label span{color:var(--mu);font-size:13px}
+select,input{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--tx);width:100%;min-width:0}
+select:focus,input:focus{outline:none;border-color:var(--red)}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:11px 18px;background:var(--red);color:#fff;cursor:pointer}
+button.ghost{background:none;border:1.5px solid var(--line);color:var(--tx)}
+button.big{width:100%;padding:18px;font-size:20px;border-radius:16px;margin-top:14px}
+button:disabled{opacity:.5;cursor:default}
+:is(button,select,input):focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.badge{font-size:14px;font-weight:700;padding:4px 14px;border-radius:999px;border:1.5px solid var(--ok);color:var(--ok)}
+.count{display:flex;align-items:baseline;gap:8px;margin:16px 0 4px}
+.count b{font-size:56px;line-height:1;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0 6px}
+.stat{background:var(--card2);border:1.5px solid transparent;border-radius:16px;padding:14px 6px;text-align:center;color:var(--tx);font:inherit;width:100%}
+.stat b{display:block;font-size:40px;line-height:1.1;font-weight:700}
+.stat span{display:block;color:var(--mu);font-size:13px;font-weight:500;line-height:1.25}
+.stat.p b{color:var(--ok)}.stat.a b{color:var(--red)}
+button.stat{cursor:pointer}
+button.stat[aria-expanded=true]{border-color:var(--red)}
+.sec{font-size:16px;font-weight:700;margin-top:16px}
+.sec small{font-weight:500;margin-left:6px}
+.it .idc{font-weight:700;min-width:64px}
+.it .nm{flex:1;text-align:left}
+.list{display:grid;gap:6px;margin-top:10px;max-height:52vh;overflow-y:auto}
+.it{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:11px 14px;border-radius:12px;background:var(--card2)}
+.it b{font-weight:600}.it small{color:var(--mu);font-size:13px}
+.it .tm{white-space:nowrap}
+.it.new{animation:fl 2.4s ease-out}
+@keyframes fl{from{background:rgba(24,178,107,.45)}}
+.empty{color:var(--mu);text-align:center;padding:22px;font-size:15px}
+#login{max-width:380px;margin:12vh auto 0;display:grid;gap:12px}
+dialog{margin:auto;border:1px solid var(--line);border-radius:24px;background:var(--card);color:var(--tx);padding:24px;width:min(92vw,460px);text-align:center}
+dialog::backdrop{background:#000d}
+#qr{display:inline-block;background:#fff;padding:14px;border-radius:16px;line-height:0;margin:14px 0 8px}
+#qrLink{word-break:break-all;font-size:12px;color:var(--mu)}
+.warn{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid #e0a800;color:#e0a800;font-size:13.5px;text-align:left}
+#st{position:fixed;bottom:10px;right:10px;font-size:12px;color:var(--mu);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.it.new{animation:none}}
+</style>
+</head>
+<body>
+
+<section id="login" class="card" hidden>
+  <h1>Doctor Dashboard</h1>
+  <input id="keyIn" type="password" placeholder="Doctor key" autocomplete="current-password">
+  <button id="keyGo">Sign in</button>
+  <p class="mu" id="loginErr"></p>
+</section>
+
+<main id="main" hidden>
+  <div class="row"><h1 class="grow">Attendance</h1><button class="ghost" id="logout">Sign out</button></div>
+
+  <!-- Setup -->
+  <section class="card" id="setup">
+    <div class="row">
+      <label><span>Subject</span><select id="sub"></select></label>
+      <label><span>Group</span><select id="grp"></select></label>
+    </div>
+    <button class="big" id="start">Start Session</button>
+    <p class="mu" id="setupErr" style="margin-top:10px"></p>
+  </section>
+
+  <!-- Active session -->
+  <section class="card" id="live" hidden>
+    <div class="row">
+      <h2 class="grow" id="liveTitle"></h2><span class="badge">Active</span>
+    </div>
+    <p class="mu" id="liveSub"></p>
+    <div class="row" style="margin-top:14px">
+      <button id="showQR" class="grow">Show QR</button>
+      <button class="ghost" id="endS">End Session</button>
+    </div>
+    <label id="actWrap" style="margin-top:12px" hidden><span>Other active sessions</span><select id="actSel"></select></label>
+    <div class="stats">
+      <div class="stat"><b id="nTotal">-</b><span>Group total</span></div>
+      <div class="stat p"><b id="cnt">0</b><span>Checked in</span></div>
+      <button class="stat a" id="absBtn" aria-expanded="false" aria-controls="absWrap"><b id="nAbs">-</b><span>Absent (tap to view)</span></button>
+    </div>
+    <div id="absWrap" hidden>
+      <h3 class="sec">Absent students <small class="mu">lowest ID first</small></h3>
+      <div class="list" id="absL"></div>
+    </div>
+    <h3 class="sec">Live feed</h3>
+    <div class="list" id="feed"></div>
+  </section>
+</main>
+
+<dialog id="qrDlg">
+  <h2 id="qrTitle"></h2>
+  <div id="qr"></div>
+  <p id="qrLink"></p>
+  <p id="qrWarn" class="warn" hidden></p>
+  <button class="ghost" id="qrClose" style="margin-top:16px;width:100%">Close</button>
+</dialog>
+<div id="st" hidden>-</div>
+
+<script>
+/* ============ Settings ============ */
+const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
+const SCAN_URL='https://juster-5zq.pages.dev/scan.html';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
+const REFRESH_MS=5000;         // live feed polling interval
+
+/* ============ Helpers ============ */
+const $=s=>document.querySelector(s);
+const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n};
+const store={get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{sessionStorage.setItem(k,v)}catch(e){}},del:k=>{try{sessionStorage.removeItem(k)}catch(e){}}};
+let KEY=store.get('tk')||'',active=[],SES=null,busy=false,seen=new Set(),firstFeed=true;
+const status=t=>$('#st').textContent=t;
+/* every teacher request is a POST: the key never appears in a URL, history or logs */
+async function api(type,extra){return (await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type,key:KEY,...extra})})).json()}
+const clock=t=>new Date(t).toLocaleTimeString('en-GB');
+
+/* ============ Sign in / out ============ */
+function showLogin(msg){$('#main').hidden=true;$('#st').hidden=true;$('#login').hidden=false;$('#loginErr').textContent=msg||'';$('#keyIn').value=''}
+$('#keyGo').onclick=()=>{KEY=$('#keyIn').value.trim();if(!KEY)return;store.set('tk',KEY);init()};
+$('#keyIn').onkeydown=e=>{if(e.key==='Enter')$('#keyGo').click()};
+$('#logout').onclick=()=>{store.del('tk');KEY='';SES=null;showLogin()};
+
+/* ============ Load subjects, groups and any running session ============ */
+async function init(){
+  if(!KEY)return showLogin();
+  try{
+    const d=await api('init');
+    if(!d.ok){store.del('tk');KEY='';return showLogin(d.msg||'Error')}
+    $('#login').hidden=true;$('#main').hidden=false;$('#st').hidden=false;
+    const keepS=$('#sub').value,keepG=$('#grp').value;
+    $('#sub').replaceChildren(...d.subjects.map(s=>{const o=el('option','',s);o.value=s;return o}));
+    $('#grp').replaceChildren(...d.groups.map(g=>{const o=el('option','','Group '+g);o.value=g;return o}));
+    if(keepS)$('#sub').value=keepS;if(keepG)$('#grp').value=keepG;
+    active=d.active;
+    const back=SES&&active.find(s=>s.id===SES.id)||active.find(s=>s.id===localStorage.getItem('tsid'))||active[0];
+    back?openSession(back):closeView();
+  }catch(e){showLogin('Could not reach the server.')}
+}
+
+/* ============ Start / end ============ */
+$('#start').onclick=async()=>{
+  const b=$('#start');b.disabled=true;b.textContent='Starting...';$('#setupErr').textContent='';
+  try{
+    const r=await api('startSession',{subject:$('#sub').value,group:$('#grp').value});
+    if(r.ok){await init();openSession(r.session)}else $('#setupErr').textContent=r.msg||'Error';
+  }catch(e){$('#setupErr').textContent='Could not reach the server.'}
+  b.disabled=false;b.textContent='Start Session';
+};
+$('#endS').onclick=async()=>{
+  if(!SES||!confirm('End this session? Students will no longer be able to check in.'))return;
+  const r=await api('endSession',{session:SES.id});
+  if(r.ok){SES=null;localStorage.removeItem('tsid');init()}else alert(r.msg||'Error');
+};
+
+function openSession(s){
+  SES=s;localStorage.setItem('tsid',s.id);seen=new Set();firstFeed=true;
+  $('#setup').hidden=true;$('#live').hidden=false;
+  $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
+  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
+  $('#feed').replaceChildren(el('p','empty','Waiting for students...'));
+  const w=$('#actWrap');w.hidden=active.length<2;
+  $('#actSel').replaceChildren(...active.map(a=>{const o=el('option','',`${a.subject} - Group ${a.group}`);o.value=a.id;o.selected=a.id===s.id;return o}));
+  refresh();
+}
+$('#actSel').onchange=e=>{const s=active.find(a=>a.id===e.target.value);if(s)openSession(s)};
+function closeView(){SES=null;$('#live').hidden=true;$('#setup').hidden=false}
+
+/* ============ Show QR ============ */
+$('#showQR').onclick=()=>{
+  if(!SES)return;
+  const u=new URL(SCAN_URL||'scan.html',location.href);
+  u.search=new URLSearchParams({session:SES.id,subject:SES.subject,group:SES.group});
+  $('#qrTitle').textContent=`${SES.subject} - Group ${SES.group}`;
+  const q=$('#qr');q.replaceChildren();
+  new QRCode(q,{text:u.href,width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
+  $('#qrLink').textContent=u.href;
+  /* a QR that points to localhost / a LAN address / a file cannot be opened by a student's phone ("This site can't be reached") */
+  const local=u.protocol==='file:'||/^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(u.hostname)||/\.local$/.test(u.hostname);
+  const w=$('#qrWarn');w.hidden=!local;
+  if(local)w.textContent=`This QR points to "${u.host||'a local file'}", which students' phones cannot open. Set SCAN_URL at the top of teacher.html to the live https address of scan.html (for example https://your-site.com/scan.html), then reload this page.`;
+  $('#qrDlg').showModal();
+};
+$('#qrClose').onclick=()=>$('#qrDlg').close();
+
+/* ============ Absent list toggle ============ */
+$('#absBtn').onclick=()=>{const w=$('#absWrap'),open=w.hidden;w.hidden=!open;$('#absBtn').setAttribute('aria-expanded',open)};
+
+/* ============ Live feed: polls every 5 seconds ============ */
+async function refresh(){
+  if(!SES||busy)return;busy=true;
+  try{
+    const d=await api('dashboard',{session:SES.id});
+    if(d.code==='AUTH'||d.code==='LOCKED'){store.del('tk');KEY='';return showLogin(d.msg)}
+    if(!d.ok){status(d.msg||'Error');return}
+    if(!d.active){status('Session ended');init();return}
+    $('#cnt').textContent=d.count;$('#nTotal').textContent=d.total;$('#nAbs').textContent=d.absent;
+    $('#absL').replaceChildren(...(d.absentees.length?d.absentees.map(a=>{
+      const it=el('div','it');it.append(el('b','idc',a.id),el('span','nm',a.name));return it}):[el('p','empty',d.total?'Everyone has checked in.':'No students found for this group in the Students sheet.')]));
+    $('#feed').replaceChildren(...(d.feed.length?d.feed.map(x=>{
+      const k=x.id+'@'+x.t,it=el('div','it'+(!firstFeed&&!seen.has(k)?' new':''));
+      seen.add(k);const n=el('div');n.append(el('b','',x.name),el('br'),el('small','','ID '+x.id));
+      it.append(n,el('small','tm',clock(x.t)));return it}):[el('p','empty','Waiting for students...')]));
+    firstFeed=false;status('Updated '+new Date().toLocaleTimeString('en-GB'));
+  }catch(e){status('Connection lost. Retrying...')}
+  finally{busy=false}
+}
+setInterval(()=>{if(!document.hidden&&KEY)refresh()},REFRESH_MS);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&KEY)refresh()});
+
+init();
+</script>
+</body>
+</html>
