@@ -21,9 +21,6 @@ h2{font-size:20px;font-weight:700}
 .mu{color:var(--mu);font-size:14px;font-weight:500}
 label{display:grid;gap:4px;flex:1;min-width:140px}
 label span{color:var(--mu);font-size:13px}
-.chk{display:flex;align-items:center;gap:10px;flex:2;min-width:200px;cursor:pointer}
-.chk input{width:auto;accent-color:var(--red)}
-.chk b{font-weight:600;font-size:15px}
 select,input{font:inherit;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--tx);width:100%;min-width:0}
 select:focus,input:focus{outline:none;border-color:var(--red)}
 button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:11px 18px;background:var(--red);color:#fff;cursor:pointer}
@@ -81,11 +78,6 @@ dialog::backdrop{background:#000d}
       <label><span>Subject</span><select id="sub"></select></label>
       <label><span>Group</span><select id="grp"></select></label>
     </div>
-    <div class="row" style="margin-top:12px">
-      <label class="chk"><input type="checkbox" id="geoOn" checked><b>Verify student location</b></label>
-      <label><span>Allowed distance</span><select id="rad"></select></label>
-    </div>
-    <p class="mu" style="margin-top:8px">The classroom location is this device's position when you press Start. For best accuracy, start the session from your phone.</p>
     <button class="big" id="start">Start Session</button>
     <p class="mu" id="setupErr" style="margin-top:10px"></p>
   </section>
@@ -134,7 +126,7 @@ const REFRESH_MS=5000;         // live feed polling interval
 const $=s=>document.querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n};
 const store={get:k=>{try{return sessionStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{sessionStorage.setItem(k,v)}catch(e){}},del:k=>{try{sessionStorage.removeItem(k)}catch(e){}}};
-let KEY=store.get('tk')||'',active=[],SES=null,busy=false,seen=new Set(),firstFeed=true,GEO={maxAcc:150,defaultRadius:150};
+let KEY=store.get('tk')||'',active=[],SES=null,busy=false,seen=new Set(),firstFeed=true;
 const status=t=>$('#st').textContent=t;
 /* every teacher request is a POST: the key never appears in a URL, history or logs */
 async function api(type,extra){return (await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type,key:KEY,...extra})})).json()}
@@ -157,7 +149,6 @@ async function init(){
     $('#sub').replaceChildren(...d.subjects.map(s=>{const o=el('option','',s);o.value=s;return o}));
     $('#grp').replaceChildren(...d.groups.map(g=>{const o=el('option','','Group '+g);o.value=g;return o}));
     if(keepS)$('#sub').value=keepS;if(keepG)$('#grp').value=keepG;
-    GEO=d.geo||GEO;fillRadius();
     active=d.active;
     const back=SES&&active.find(s=>s.id===SES.id)||active.find(s=>s.id===localStorage.getItem('tsid'))||active[0];
     back?openSession(back):closeView();
@@ -165,34 +156,13 @@ async function init(){
 }
 
 /* ============ Start / end ============ */
-/* the classroom location = this device's position when the session starts */
-const getPos=()=>new Promise((ok,no)=>{
-  if(!navigator.geolocation)return no({code:0});
-  navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),no,{enableHighAccuracy:true,timeout:20000,maximumAge:0});
-});
-const geoWhy=e=>e&&e.code===1?'Location permission was denied for this page.':e&&e.code===3?'Getting the location timed out.':'This device could not provide a location.';
-function fillRadius(){const r=$('#rad');if(r.children.length)return;[50,100,150,200,300,500].forEach(m=>{const o=el('option','',m+' m');o.value=m;o.selected=m===GEO.defaultRadius;r.append(o)})}
-
 $('#start').onclick=async()=>{
-  const b=$('#start');b.disabled=true;$('#setupErr').textContent='';
-  const reset=()=>{b.disabled=false;b.textContent='Start Session'};
+  const b=$('#start');b.disabled=true;b.textContent='Starting...';$('#setupErr').textContent='';
   try{
-    let geo={};
-    if($('#geoOn').checked){
-      b.textContent='Getting your location...';
-      try{
-        const p=await getPos();
-        if(p.acc<=GEO.maxAcc)geo={lat:p.lat,lng:p.lng,acc:p.acc,radius:+$('#rad').value};
-        else if(!confirm(`Your location is only accurate to about ${p.acc} m, so the location check would be unreliable.\n\nOK = start WITHOUT a location check\nCancel = go back (try from your phone, or near a window)`))return reset();
-      }catch(e){
-        if(!confirm(geoWhy(e)+'\n\nOK = start WITHOUT a location check\nCancel = go back'))return reset();
-      }
-    }
-    b.textContent='Starting...';
-    const r=await api('startSession',{subject:$('#sub').value,group:$('#grp').value,...geo});
+    const r=await api('startSession',{subject:$('#sub').value,group:$('#grp').value});
     if(r.ok){await init();openSession(r.session)}else $('#setupErr').textContent=r.msg||'Error';
   }catch(e){$('#setupErr').textContent='Could not reach the server.'}
-  reset();
+  b.disabled=false;b.textContent='Start Session';
 };
 $('#endS').onclick=async()=>{
   if(!SES||!confirm('End this session? Students will no longer be able to check in.'))return;
@@ -204,7 +174,7 @@ function openSession(s){
   SES=s;localStorage.setItem('tsid',s.id);seen=new Set();firstFeed=true;
   $('#setup').hidden=true;$('#live').hidden=false;
   $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
-  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m`:'Location check: off');
+  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
   $('#feed').replaceChildren(el('p','empty','Waiting for students...'));
   const w=$('#actWrap');w.hidden=active.length<2;
@@ -247,7 +217,7 @@ async function refresh(){
       const it=el('div','it');it.append(el('b','idc',a.id),el('span','nm',a.name));return it}):[el('p','empty',d.total?'Everyone has checked in.':'No students found for this group in the Students sheet.')]));
     $('#feed').replaceChildren(...(d.feed.length?d.feed.map(x=>{
       const k=x.id+'@'+x.t,it=el('div','it'+(!firstFeed&&!seen.has(k)?' new':''));
-      seen.add(k);const n=el('div');n.append(el('b','',x.name),el('br'),el('small','','ID '+x.id+(x.dist!=null?' - '+x.dist+' m away':'')));
+      seen.add(k);const n=el('div');n.append(el('b','',x.name),el('br'),el('small','','ID '+x.id));
       it.append(n,el('small','tm',clock(x.t)));return it}):[el('p','empty','Waiting for students...')]));
     firstFeed=false;status('Updated '+new Date().toLocaleTimeString('en-GB'));
   }catch(e){status('Connection lost. Retrying...')}

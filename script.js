@@ -183,6 +183,7 @@ function settings(){
     item({svg:'trash',t:'Reset saved data',s:'Events, read notifications and tasks (name, group and section stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,section:S.section,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
 }
 /* ---------- ATTENDANCE (student) ---------- */
+/* ---------- ATTENDANCE (student) ---------- */
 const Att=(()=>{
   const KID='att:id',KDEV='att:dev',KSUB='att:subjects';          // same keys as scan.html
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -199,7 +200,6 @@ const Att=(()=>{
     'You can check in once per session, only while your doctor\'s session for that subject is active, and only for your own group.',
     'Scan only the QR code shown by your doctor, for the subject you selected.',
     'If you entered a wrong ID, ask your doctor to reset the link for your device.',
-    'If your doctor turns on the location check, your phone\'s location is read once at check-in to confirm you are in the classroom. Only the distance is saved, never your coordinates, and you are not tracked.',
     'Your name, ID and check-in time are stored in the attendance record.'
   ];
   function terms(){
@@ -288,31 +288,18 @@ const Att=(()=>{
     put(card(mk('h3','','Take Attendance'),lab,go,rd,msg),back());
   }
 
-  /* location: the phone's position is read once, and only when the doctor's session asks for it */
-  const getPos=()=>new Promise((ok,no)=>{
-    if(!navigator.geolocation)return no({code:0});
-    navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),no,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
-  });
-  const geoMsg=e=>e&&e.code===1?'Location permission was denied. Allow location for this site in your browser or phone settings, then try again.':e&&e.code===3?'Could not get your location in time. Turn on GPS, move near a window, then try again.':'Your device could not provide a location. Turn on Location (GPS) and try again.';
-  async function locate(q){
-    put(card(mk('h3','','Getting your location...'),mk('p','','Allow location access if your phone asks.'),mk('div','aspin')));
-    try{send(q,await getPos())}catch(e){finish('bad','Location needed',geoMsg(e),()=>locate(q))}
-  }
-
-  async function send(q,pos){
+  async function send(q){
     put(card(mk('h3','','Checking you in...'),mk('div','aspin')));
     try{
-      const r=await post({type:'attend',id:lg(KID),device:dev(),...q,...(pos||{})});
+      const r=await post({type:'attend',id:lg(KID),device:dev(),...q});
       if(r.ok)finish('ok','Checked in',`${q.subject} - Group ${q.group}`);
-      else if(r.code==='NEED_LOCATION'&&!pos)locate(q);                         // this session checks the location
-      else if(['TOO_FAR','LOW_ACCURACY','BAD_LOCATION','NEED_LOCATION'].includes(r.code))finish('bad','Location check failed',r.msg,()=>locate(q));
       else finish(r.code==='ALREADY'?'info':'bad',r.code==='ALREADY'?'Already checked in':'Check-in failed',r.msg);
     }catch(e){finish('bad','No internet connection','Check your connection and scan again.')}
   }
-  function finish(kind,title,sub,retry){
+  function finish(kind,title,sub){
     const c=card(mk('span'),mk('h3','',title),mk('p','',sub||''));c.className='attc ares '+kind;
     c.firstChild.innerHTML=svg(kind==='ok'?'ok':'about');
-    put(c,btn(retry?'Try again':'Scan again',retry||take),back());
+    put(c,btn('Scan again',take),back());
   }
 
   /* show attendance: a list of subjects; each one opens on its own screen */
