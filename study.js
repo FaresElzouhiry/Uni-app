@@ -19,11 +19,11 @@ const KEY = 'portal:study', LBKEY = 'portal:study:lb';
 
    اللي بيظهر في الليدربورد = (الدقايق في اليوم) × (عدد الأيام اللي عدّت من الأسبوع)
    الأسبوع بيبدأ السبت: السبت = 1 ... الجمعة = 7
-   يعني Omar (180 دقيقة = 3 ساعات في اليوم):
-       السبت 3 ساعات · الأحد 6 ساعات · الاثنين 9 ساعات ... الجمعة 21 ساعة، وبعدها الأسبوع بيبدأ من جديد.
+   يعني Omar (210 دقيقة = 3 ساعات ونص في اليوم):
+       السبت 3 ساعات ونص · الأحد 7 ساعات · الاثنين 10 ساعات ونص ... الجمعة 24 ساعة ونص، وبعدها الأسبوع بيبدأ من جديد.
 
    تغيّر حاجة إزاي؟
-   • تغيير سرعة طالب  → عدّل الرقم الأخير في سطره (180 = 3 ساعات في اليوم، 120 = ساعتين، 60 = ساعة).
+   • تغيير سرعة طالب  → عدّل الرقم الأخير في سطره (210 = 3 ساعات ونص في اليوم، 180 = 3 ساعات، 120 = ساعتين، 60 = ساعة).
    • تغيير اسم/جروب/سكشن → عدّل الكلام في نفس السطر.
    • مسح طالب → امسح سطره كله.
    • إضافة طالب → انسخ أي سطر والصقه تحته وغيّر بياناته (خلي الفاصلة بعد كل سطر ما عدا الأخير).
@@ -33,7 +33,7 @@ const KEY = 'portal:study', LBKEY = 'portal:study:lb';
 const SEED_ON = true;
 const SEED = [
   // [الاسم,   جروب, سكشن, دقايق في اليوم]
-  ['Omar',     7, 19, 180],   // 3 ساعات في اليوم — الأول
+  ['Omar',     7, 19, 210],   // 3 ساعات ونص في اليوم — الأول
   ['Mariam',   3,  8, 160],
   ['Youssef',  7, 21, 145],
   ['Nour',     5, 14, 130],
@@ -90,7 +90,7 @@ try {
 } catch (e) {}
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
 
-let lb = null, lbAt = 0, tab = 'room', scope = 'all', failed = false, loading = false, tm = 0, lastSid = null;
+let lb = null, lbAt = 0, tab = 'room', scope = 'all', failed = false, failWhy = '', loading = false, tm = 0, lastSid = null;
 try { const c = JSON.parse(localStorage.getItem(LBKEY)); if (c && c.ok && c.week === weekKey(now())) lb = c; } catch (e) {}
 
 /* the name that goes on the leaderboard: first name only, or "Anonymous" */
@@ -320,7 +320,10 @@ function paintBoard() {
     return e;
   }));
 
-  if (failed) you.append(el('p', 'lb-you', "Couldn't reach the server, so real students may be missing. Check your connection and tap Refresh."));
+  if (failed) {
+    you.append(el('p', 'lb-you', "Couldn't reach the server, so real students may be missing. Check your connection and tap Refresh."));
+    if (failWhy) you.append(el('p', 'lb-you', failWhy));
+  }
   if (d) {
     const inList = rows.some(r => r.me);              // your own position, even when you are outside the top list
     if (d.me && !inList) you.append(el('p', 'lb-you', `Your rank this week: #${d.me.rank + fake.filter(f => f.m > d.me.m).length} · ${fmt(d.me.m)}`));
@@ -330,19 +333,26 @@ function paintBoard() {
 async function loadBoard() {
   if (loading) return;
   if (!url()) { paintBoard(); return; }
-  loading = true; failed = false; paintBoard();
+  loading = true; failed = false; failWhy = ''; paintBoard();
   // make sure my latest session reached the server first — but never wait more than 4 seconds for it
   try { await Promise.race([flush(), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+  let stage = 'network';
   try {
-    const r = await fetch(`${url()}?action=leaderboard&id=${encodeURIComponent(cid())}`, { cache: 'no-store', signal: ctl.signal });
+    // plain GET with no custom options/headers (a changing number in the link replaces the cache setting)
+    const r = await fetch(`${url()}?action=leaderboard&id=${encodeURIComponent(cid())}&_=${now()}`, { signal: ctl.signal });
+    stage = 'json';
     const d = await r.json();
-    if (!d || !d.ok) throw new Error('bad response');
+    stage = 'reply';
+    if (!d || !d.ok) throw new Error((d && d.error) || 'bad response');
     lb = d; lbAt = now();
     try { localStorage.setItem(LBKEY, JSON.stringify(d)); } catch (e) {}
   } catch (e) {
     failed = true;
-    console.warn('Study Rooms: leaderboard failed to load —', e);   // open the browser Console (F12) to see why
+    failWhy = stage === 'network' ? 'Reason: no answer from the server (the Web App access must be "Anyone", and the link must be the latest deployment).'
+      : stage === 'json' ? 'Reason: the server answered with a web page, not data (the leaderboard line is missing in doGet, or the deployment is old).'
+      : 'Reason: the server replied with an error — ' + e.message;
+    console.warn('Study Rooms: leaderboard failed to load —', e);   // open the browser Console (F12) to see more
   }
   clearTimeout(t); loading = false;
   paintBoard(); paint();
