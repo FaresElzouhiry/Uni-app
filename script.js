@@ -62,7 +62,7 @@ function info(label){
 /* the schedule in data.json is per SECTION (1–24): "schedules": {"20":[...]}. Group g owns sections 3g-2 … 3g, e.g. group 7 → 19, 20, 21 */
 const schedOf=s=>(D.schedules||{})[s]||[];
 const sched=()=>schedOf(S.section);
-const APP_VERSION='6';
+const APP_VERSION='1.0.0';   // shown in Settings, used in service-worker.js
 const secsOf=g=>[1,2,3].map(i=>(g-1)*3+i);   // group g → its 3 sections (group 7 → 19, 20, 21)
 const eventsOn=d=>[...sched().filter(e=>e.day===d.getDay()),...S.mine.filter(e=>e.date===iso(d))].sort((a,b)=>mins(a.start)-mins(b.start));
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.id);toast.id=setTimeout(()=>t.classList.remove('show'),2600)}
@@ -183,7 +183,6 @@ function settings(){
     item({svg:'trash',t:'Reset saved data',s:'Events, read notifications and tasks (name, group and section stay)',btn:'Reset',fn:()=>ask('Reset saved data?',[],'This clears your events and tasks on this device.').then(r=>{if(r){S=Object.assign(fresh(),{name:S.name,group:S.group,section:S.section,theme:S.theme});save();renderHome();settings();toast('Data reset')}})}));
 }
 /* ---------- ATTENDANCE (student) ---------- */
-/* ---------- ATTENDANCE (student) ---------- */
 const Att=(()=>{
   const KID='att:id',KDEV='att:dev',KSUB='att:subjects';          // same keys as scan.html
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -193,18 +192,17 @@ const Att=(()=>{
   const getJ=async p=>(await fetch(FEEDBACK_URL+'?'+new URLSearchParams(p))).json();
   const loadQR=()=>window.Html5Qrcode?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';s.onload=ok;s.onerror=no;document.head.append(s)});
 
-  /* Terms: edit the sentences below to whatever rules you want students to see */
+  /* Terms: 5 short bullet points, each starts with an emoji (written as \u escapes so they survive any file encoding) */
   const TERMS=[
-    'Your student ID is saved on this device the first time you set up attendance, and the device stays linked to it permanently.',
-    'One device can only be used with one student ID. Do not use your phone to check in for anyone else.',
-    'You can check in once per session, only while your doctor\'s session for that subject is active, and only for your own group.',
-    'Scan only the QR code shown by your doctor, for the subject you selected.',
-    'If you entered a wrong ID, ask your doctor to reset the link for your device.',
-    'Your name, ID and check-in time are stored in the attendance record.'
+    ['\u{1F512}','Your ID is linked to this device permanently. One device can only be used with one student ID.'],
+    ['\u2705','You can check in once per session, only while your doctor\'s session is active and only for your own group.'],
+    ['\u{1F4CD}','When the location check is on, your location is read once at check-in. Only the distance is saved, never your coordinates.'],
+    ['\u{1F6AB}','Scan only the QR code shown by your doctor, and never check in for someone else.'],
+    ['\u{1F504}','Entered a wrong ID? Ask your doctor to reset the link for your device.']
   ];
   function terms(){
     const d=$('#dlg'),f=d.querySelector('form'),ul=mk('ul','aterms-l');
-    TERMS.forEach(t=>ul.append(mk('li','',t)));
+    TERMS.forEach(([e,t])=>{const li=mk('li');li.append(mk('span','ae',e),mk('span','',t));ul.append(li)});
     const ok=mk('button','ok','Close');ok.value='no';const b=mk('div','btns');b.append(ok);
     d.onclose=null;d.oncancel=null;d.returnValue='';f.replaceChildren(mk('h3','','Attendance terms'),ul,b);d.showModal();
   }
@@ -288,18 +286,33 @@ const Att=(()=>{
     put(card(mk('h3','','Take Attendance'),lab,go,rd,msg),back());
   }
 
-  async function send(q){
+  /* location: the phone's position is read once, and only when the doctor's session asks for it */
+  const getPos=()=>new Promise((ok,no)=>{
+    if(!navigator.geolocation)return no({code:0});
+    navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),no,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  });
+  const geoMsg=e=>e&&e.code===1?'Location permission was denied. Allow location for this app (or site) in your phone settings, then try again.':e&&e.code===3?'Could not get your location in time. Turn on GPS, move near a window, then try again.':'Your device could not provide a location. Turn on Location (GPS) and try again.';
+  async function locate(q){
+    put(card(mk('h3','','Getting your location...'),mk('p','','Allow location access if your phone asks.'),mk('div','aspin')));
+    try{send(q,await getPos())}catch(e){finish('bad','Location needed',geoMsg(e),()=>locate(q),'GEO_'+(e&&e.code))}
+  }
+
+  async function send(q,pos){
     put(card(mk('h3','','Checking you in...'),mk('div','aspin')));
     try{
-      const r=await post({type:'attend',id:lg(KID),device:dev(),...q});
+      const r=await post({type:'attend',id:lg(KID),device:dev(),...q,...(pos||{})});
       if(r.ok)finish('ok','Checked in',`${q.subject} - Group ${q.group}`);
-      else finish(r.code==='ALREADY'?'info':'bad',r.code==='ALREADY'?'Already checked in':'Check-in failed',r.msg);
+      else if(r.code==='NEED_LOCATION'&&!pos)locate(q);                         // this session checks the location
+      else if(['TOO_FAR','LOW_ACCURACY','BAD_LOCATION','NEED_LOCATION'].includes(r.code))finish('bad','Location check failed',r.msg,()=>locate(q),r.code);
+      else if(r.code==='GEO_PENDING')finish('info','Almost ready',r.msg,()=>send(q));          // the doctor is still setting the location
+      else finish(r.code==='ALREADY'?'info':'bad',r.code==='ALREADY'?'Already checked in':'Check-in failed',r.msg,null,r.code);
     }catch(e){finish('bad','No internet connection','Check your connection and scan again.')}
   }
-  function finish(kind,title,sub){
+  function finish(kind,title,sub,retry,code){
     const c=card(mk('span'),mk('h3','',title),mk('p','',sub||''));c.className='attc ares '+kind;
+    if(code&&kind!=='ok')c.append(mk('p','acode','Code: '+code));                 // the exact reason, in case something fails
     c.firstChild.innerHTML=svg(kind==='ok'?'ok':'about');
-    put(c,btn('Scan again',take),back());
+    put(c,btn(retry?'Try again':'Scan again',retry||take),back());
   }
 
   /* show attendance: a list of subjects; each one opens on its own screen */

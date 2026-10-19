@@ -265,7 +265,6 @@ dialog .chips2 label.chip{display:block;position:relative;margin:0}
 #instx{flex:none;width:34px;height:34px;border-radius:50%;color:var(--mu);font-size:16px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 /* ---------- attendance (student) ---------- */
-/* ---------- attendance (student) ---------- */
 .attc{display:grid;gap:12px;padding:18px;margin-bottom:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--s1)}
 .attc h3{font-size:21px}
 .attc p{color:var(--mu);font-size:14.5px}
@@ -301,4 +300,7 @@ dialog .chips2 label.chip{display:block;position:relative;margin:0}
 /* Terms button (circled "i") at the bottom of every attendance screen */
 .aterms{display:flex;align-items:center;justify-content:center;gap:8px;width:fit-content;margin:16px auto 6px;padding:8px 14px;color:var(--mu);font-size:14px;font-weight:600}
 .aterms .i{width:20px;height:20px}
-.aterms-l{display:grid;gap:10px;padding-left:18px;color:var(--mu);font-size:14.5px;line-height:1.45;margin-top:12px}
+.aterms-l{display:grid;gap:12px;padding:0;list-style:none;color:var(--mu);font-size:14.5px;line-height:1.45;margin-top:12px}
+.aterms-l li{display:flex;gap:12px;align-items:flex-start}
+.aterms-l .ae{flex:none;width:26px;text-align:center;font-size:20px;line-height:1.2}
+.acode{font-size:12px!important;opacity:.7}
