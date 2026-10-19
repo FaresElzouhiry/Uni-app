@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Set classroom location</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--card:#141417;--line:#27272c;--tx:#fff;--mu:#9b9ba4;--red:#e5202e;--ok:#18b26b}
+*{box-sizing:border-box;margin:0}
+html,body{min-height:100%}
+body{font:500 17px/1.45 Outfit,system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+main{width:100%;max-width:440px;display:grid;gap:14px;align-content:start}
+h1{font-size:26px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;display:grid;gap:12px}
+.card p{color:var(--mu);font-size:15px}
+button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:16px;background:var(--red);color:#fff;cursor:pointer;width:100%;font-size:18px}
+button.ghost{background:none;color:var(--mu);border:1px solid var(--line);font-weight:500;font-size:15px;padding:12px}
+button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.res{text-align:center;justify-items:center;padding:28px 18px}
+.res svg{width:58px;height:58px}
+.res h2{font-size:22px;font-weight:700}
+.res.ok{border-color:var(--ok)}.res.ok svg{color:var(--ok)}
+.res.bad{border-color:var(--red)}.res.bad svg{color:var(--red)}
+.fine{font-size:13.5px!important}
+.spin{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--red);border-radius:50%;animation:s .8s linear infinite;margin:auto}
+@keyframes s{to{transform:rotate(360deg)}}
+[hidden]{display:none!important}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Classroom location</h1>
+
+  <section id="ask" class="card" hidden>
+    <b>Set the classroom location</b>
+    <p>Stand inside the classroom with this phone, then tap the button. Students will only be able to check in within the distance you chose around this spot.</p>
+    <button id="go">Use my location</button>
+    <p class="fine">Your phone is asked for its location once. Nothing is tracked.</p>
+  </section>
+
+  <section id="busy" class="card" hidden>
+    <div class="spin"></div>
+    <p id="busyTx" style="text-align:center">Getting a precise GPS fix...</p>
+  </section>
+
+  <section id="res" class="card res" hidden>
+    <span id="rIc"></span><h2 id="rT"></h2><p id="rS"></p><p class="fine" id="rD"></p>
+    <button id="rBtn" class="ghost" hidden>Try again</button>
+  </section>
+</main>
+
+<script>
+/* ============ Settings ============ */
+const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';   // your Apps Script /exec URL
+const GOOD_ACC=25;        // meters: stop waiting as soon as the phone reports this precision
+const MAX_WAIT=15000;     // ms: otherwise use the best reading collected in this time
+
+/* ============ Helpers ============ */
+const $=s=>document.querySelector(s);
+const ICON={
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6"/></svg>',
+  bad:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>'
+};
+const box=id=>['ask','busy','res'].forEach(b=>$('#'+b).hidden=b!==id);
+const post=async o=>(await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)})).json();
+function result(kind,title,sub,detail,retry){
+  box('res');$('#res').className='card res '+kind;
+  $('#rIc').innerHTML=ICON[kind];$('#rT').textContent=title;$('#rS').textContent=sub||'';$('#rD').textContent=detail||'';
+  $('#rBtn').hidden=!retry;$('#rBtn').onclick=retry||null;
+}
+
+/* ============ Read the link: set-location.html?sessionId=XYZ&k=TOKEN ============ */
+const q=new URLSearchParams(location.search);
+const SESSION=q.get('sessionId')||'',TOKEN=q.get('k')||'';
+
+/* Best GPS fix: keep listening for a few seconds and keep the most precise reading.
+   The first fix of a phone is often coarse (Wi-Fi / cell); GPS gets precise a moment later. */
+function bestFix(onTick){
+  return new Promise((ok,no)=>{
+    if(!navigator.geolocation)return no({code:0});
+    let best=null,done=false,wid,t;
+    const finish=()=>{if(done)return;done=true;navigator.geolocation.clearWatch(wid);clearTimeout(t);best?ok(best):no({code:3})};
+    wid=navigator.geolocation.watchPosition(p=>{
+      const c={lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)};
+      if(!best||c.acc<best.acc)best=c;
+      onTick(best);
+      if(best.acc<=GOOD_ACC)finish();
+    },e=>{
+      if(done)return;
+      if(e.code===3&&best)return finish();                         // timeout but we already have a reading
+      done=true;navigator.geolocation.clearWatch(wid);clearTimeout(t);no(e);
+    },{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+    t=setTimeout(finish,MAX_WAIT);
+  });
+}
+const geoMsg=e=>e&&e.code===1?'Location permission was denied. Allow location for this site in your browser or phone settings, then try again.':e&&e.code===3?'Could not get a GPS fix in time. Go near a window or outside, make sure Location is on, then try again.':'This phone could not provide a location. Turn on Location (GPS) and try again.';
+
+/* ============ Set the location ============ */
+async function setLocation(){
+  box('busy');$('#busyTx').textContent='Getting a precise GPS fix...';
+  let fix;
+  try{fix=await bestFix(c=>{$('#busyTx').textContent=`Getting a precise GPS fix... ${c.acc} m`})}
+  catch(e){return result('bad','Could not get your location',geoMsg(e),'',setLocation)}
+  $('#busyTx').textContent='Saving the classroom location...';
+  try{
+    const r=await post({type:'set_location',sessionId:SESSION,k:TOKEN,lat:fix.lat,lng:fix.lng,acc:fix.acc});
+    if(r.ok)result('ok','Location set successfully!','You can close this page.',`Accuracy about ${r.acc} m. Students can check in within ${r.radius} m of this spot.`);
+    else result('bad','Could not set the location',r.msg||'Something went wrong.','',['LOW_ACCURACY','BAD_LOCATION'].includes(r.code)?setLocation:null);
+  }catch(e){result('bad','No internet connection','Check your connection and try again.','',setLocation)}
+}
+
+/* ============ Start ============ */
+if(!SESSION||!TOKEN){
+  result('bad','Invalid link','Scan the QR code shown on the laptop again.');
+}else{
+  box('ask');$('#go').onclick=setLocation;                          // one tap = the doctor confirms "I am in the classroom"
+}
+</script>
+</body>
+</html>

@@ -32,12 +32,20 @@ button:disabled{opacity:.6}
 .err{color:var(--red)!important;min-height:1.2em}
 .spin{width:34px;height:34px;border:4px solid var(--line);border-top-color:var(--red);border-radius:50%;animation:s .8s linear infinite;margin:auto}
 @keyframes s{to{transform:rotate(360deg)}}
+.getapp{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:18px;border:1.5px solid var(--red);background:var(--card);color:var(--tx);text-decoration:none}
+.getapp .gi{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--red);color:#fff}
+.getapp svg{width:22px;height:22px}
+.getapp b{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.getapp small{display:block;color:var(--mu);font-size:13px;word-break:break-all;margin-top:2px}
+.getapp:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .terms{display:flex;align-items:center;justify-content:center;gap:8px;width:fit-content;margin:10px auto 0;padding:8px 14px;background:none;color:var(--mu);font-size:14px;font-weight:600}
 .terms svg{width:20px;height:20px}
 dialog{margin:auto;width:min(92vw,420px);padding:22px;border:1px solid var(--line);border-radius:22px;background:var(--card);color:var(--tx)}
 dialog::backdrop{background:#000a}
 dialog h2{font-size:21px;margin-bottom:12px}
-dialog ul{display:grid;gap:10px;padding-left:18px;color:var(--mu);font-size:14.5px;line-height:1.45;margin-bottom:16px}
+dialog ul{display:grid;gap:12px;padding:0;list-style:none;color:var(--mu);font-size:14.5px;line-height:1.45;margin-bottom:16px}
+dialog li{display:flex;gap:12px;align-items:flex-start}
+dialog .ae{flex:none;width:26px;text-align:center;font-size:20px;line-height:1.2}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
@@ -47,7 +55,7 @@ dialog ul{display:grid;gap:10px;padding-left:18px;color:var(--mu);font-size:14.5
   <h1>Attendance</h1>
   <span class="tag" id="tag" hidden></span>
 
-  <section id="busy" class="card" hidden><div class="spin"></div><p style="text-align:center">Checking you in...</p></section>
+  <section id="busy" class="card" hidden><div class="spin"></div><p id="busyTx" style="text-align:center">Checking you in...</p></section>
 
   <!-- First time on this device: enter the student ID once -->
   <section id="idBox" class="card" hidden>
@@ -63,18 +71,23 @@ dialog ul{display:grid;gap:10px;padding-left:18px;color:var(--mu);font-size:14.5
     <button id="rBtn" hidden>Try again</button>
   </section>
 
+  <!-- shown only when the page is NOT opened inside the installed app -->
+  <a class="getapp" id="getapp" href="https://fareselzouhiry.github.io/Uni-app/" target="_blank" rel="noopener" hidden>
+    <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 11 12 15.5 16.5 11M5 19h14"/></svg></span>
+    <span><b>Want a better experience? Download the app from this link.</b><small>https://fareselzouhiry.github.io/Uni-app/</small></span>
+  </a>
+
   <button class="terms" id="termsBtn" type="button"><span>Terms</span></button>
 </main>
 
 <dialog id="termsDlg">
   <h2>Attendance terms</h2>
   <ul>
-    <li>Your student ID is saved on this device the first time you check in, and the device stays linked to it permanently.</li>
-    <li>One device can only be used with one student ID. Do not use your phone to check in for anyone else.</li>
-    <li>You can check in once per session, only while your doctor's session is active, and only for your own group.</li>
-    <li>Scan only the QR code shown by your doctor for your lecture.</li>
-    <li>If you entered a wrong ID, ask your doctor to reset the link for your device.</li>
-    <li>Your name, ID and check-in time are stored in the attendance record.</li>
+    <li><span class="ae">&#128274;</span><span>Your ID is linked to this device permanently. One device can only be used with one student ID.</span></li>
+    <li><span class="ae">&#9989;</span><span>You can check in once per session, only while your doctor's session is active and only for your own group.</span></li>
+    <li><span class="ae">&#128205;</span><span>When the location check is on, your location is read once at check-in. Only the distance is saved, never your coordinates.</span></li>
+    <li><span class="ae">&#128683;</span><span>Scan only the QR code shown by your doctor, and never check in for someone else.</span></li>
+    <li><span class="ae">&#128260;</span><span>Entered a wrong ID? Ask your doctor to reset the link for your device.</span></li>
   </ul>
   <button id="termsClose" type="button">Close</button>
 </dialog>
@@ -112,10 +125,10 @@ function result(kind,title,sub,retry){
 }
 
 /* ============ Submit ============ */
-async function submit(id){
-  box('busy');
+async function submit(id,pos){
+  $('#busyTx').textContent='Checking you in...';box('busy');
   try{
-    const r=await post({type:'attend',id,device:DEV,...P});
+    const r=await post({type:'attend',id,device:DEV,...P,...(pos||{})});
     if(r.ok){
       LS.set('att:id',id);
       const first=(r.name||'').split(' ')[0];
@@ -124,10 +137,26 @@ async function submit(id){
       LS.set('att:id',id);result('info','Already checked in',r.msg);
     }else if(r.code==='UNKNOWN_ID'){
       LS.del('att:id');askId(r.msg);                       // nothing was linked: let the student fix the ID
+    }else if(r.code==='NEED_LOCATION'&&!pos){
+      locate(id);                                          // the doctor turned the location check on for this session
+    }else if(['TOO_FAR','LOW_ACCURACY','BAD_LOCATION','NEED_LOCATION'].includes(r.code)){
+      result('bad','Location check failed',r.msg,()=>locate(id));
     }else{
-      result('bad','Check-in failed',r.msg||'Something went wrong.',['BAD'].includes(r.code)?()=>submit(id):null);
+      result('bad','Check-in failed',r.msg||'Something went wrong.',['BAD','GEO_PENDING'].includes(r.code)?()=>submit(id):null);
     }
   }catch(e){result('bad','No internet connection','Check your connection and try again.',()=>submit(id))}
+}
+
+/* ============ Location: read once, only when the session asks for it ============ */
+const getPos=()=>new Promise((ok,no)=>{
+  if(!navigator.geolocation)return no({code:0});
+  navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),no,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+});
+const geoMsg=e=>e&&e.code===1?'Location permission was denied. Allow location for this site in your browser or phone settings, then try again.':e&&e.code===3?'Could not get your location in time. Turn on GPS, move near a window, then try again.':'Your device could not provide a location. Turn on Location (GPS) and try again.';
+async function locate(id){
+  $('#busyTx').textContent='Getting your location...';box('busy');
+  try{const pos=await getPos();submit(id,pos)}
+  catch(e){result('bad','Location needed',geoMsg(e),()=>locate(id))}
 }
 
 /* ============ First time: ask for the ID ============ */
@@ -136,6 +165,10 @@ function askId(err){
   const go=()=>{const id=norm($('#idIn').value);if(id.length<3){$('#idErr').textContent='Enter your student ID.';return}submit(id)};
   $('#idGo').onclick=go;$('#idIn').onkeydown=e=>{if(e.key==='Enter')go()};
 }
+
+/* ============ Suggest the app, unless this page is already running inside the installed app ============ */
+const inApp=matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone;
+$('#getapp').hidden=!!inApp;
 
 /* ============ Terms ============ */
 $('#termsBtn').insertAdjacentHTML('afterbegin',ICON.info);
