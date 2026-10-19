@@ -23,6 +23,10 @@ input:focus{outline:none;border-color:var(--red)}
 button{font:inherit;font-weight:600;border:0;border-radius:14px;padding:14px;background:var(--red);color:#fff;cursor:pointer;width:100%}
 button:disabled{opacity:.6}
 :is(button,input):focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.warnbox{border-color:#e0a800}
+.warnbox>b{font-size:19px}
+.warnbox p{color:var(--tx);font-size:15.5px}
+.bigid{font-size:32px;font-weight:700;letter-spacing:3px;text-align:center;padding:14px;border-radius:14px;border:1.5px solid var(--red);background:var(--bg);word-break:break-all}
 .res{text-align:center;justify-items:center;padding:28px 18px}
 .res svg{width:58px;height:58px}
 .res h2{font-size:22px;font-weight:700}
@@ -64,6 +68,16 @@ dialog .ae{flex:none;width:26px;text-align:center;font-size:20px;line-height:1.2
     <input id="idIn" inputmode="numeric" autocomplete="off" placeholder="Student ID">
     <p class="err" id="idErr"></p>
     <button id="idGo">Check in</button>
+  </section>
+
+  <!-- Before the ID is linked to this device: the student must re-read it -->
+  <section id="confirmBox" class="card warnbox" hidden>
+    <b>&#9888;&#65039; Check your ID carefully</b>
+    <div class="bigid" id="cfId"></div>
+    <p>&#128274; Your ID cannot be changed after you confirm.</p>
+    <p>&#128241; It will be linked to this device permanently.</p>
+    <button id="cfYes">Yes, this is my ID</button>
+    <button id="cfNo" class="ghost">Edit ID</button>
   </section>
 
   <section id="res" class="card res" hidden>
@@ -112,7 +126,7 @@ const DEV=LS.get('att:dev')||(()=>{
   const d='D'+r;LS.set('att:dev',d);return d})();
 const norm=s=>String(s).replace(/[\u0660-\u0669]/g,c=>c.charCodeAt(0)-0x660).replace(/[\u06F0-\u06F9]/g,c=>c.charCodeAt(0)-0x6F0).replace(/[^0-9A-Za-z_-]/g,'');
 const post=async o=>(await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)})).json();
-const box=id=>['busy','idBox','res'].forEach(b=>$('#'+b).hidden=b!==id);
+const box=id=>['busy','idBox','confirmBox','res'].forEach(b=>$('#'+b).hidden=b!==id);
 
 /* ============ Read the QR link: ?session=XYZ&subject=Math&group=1 ============ */
 const q=new URLSearchParams(location.search);
@@ -160,10 +174,16 @@ async function locate(id){
 }
 
 /* ============ First time: ask for the ID ============ */
-function askId(err){
-  box('idBox');$('#idErr').textContent=err||'';setTimeout(()=>$('#idIn').focus(),50);
-  const go=()=>{const id=norm($('#idIn').value);if(id.length<3){$('#idErr').textContent='Enter your student ID.';return}submit(id)};
+function askId(err,v){
+  box('idBox');$('#idErr').textContent=err||'';if(v!=null)$('#idIn').value=v;setTimeout(()=>$('#idIn').focus(),50);
+  const go=()=>{const id=norm($('#idIn').value);if(id.length<3){$('#idErr').textContent='Enter your student ID.';return}confirmId(id)};
   $('#idGo').onclick=go;$('#idIn').onkeydown=e=>{if(e.key==='Enter')go()};
+}
+/* Typing the ID is not enough: the student must confirm it, because it cannot be changed and is locked to this device */
+function confirmId(id){
+  box('confirmBox');$('#cfId').textContent=id;
+  $('#cfYes').onclick=()=>submit(id);
+  $('#cfNo').onclick=()=>askId('',id);
 }
 
 /* ============ Suggest the app, unless this page is already running inside the installed app ============ */
