@@ -85,7 +85,7 @@ dialog::backdrop{background:#000d}
       <label class="chk"><input type="checkbox" id="geoOn" checked><b>Verify student location</b></label>
       <label><span>Allowed distance</span><select id="rad"></select></label>
     </div>
-    <p class="mu" style="margin-top:8px">The classroom location is this device's position when you press Start. If it is not accurate enough (a laptop, for example), you will be asked to set it with your phone instead.</p>
+    <p class="mu" style="margin-top:8px">On a laptop or desktop you will always be asked to set the classroom location by scanning a QR code with your phone. If you start the session from a phone, its own GPS is used.</p>
     <button class="big" id="start">Start Session</button>
     <p class="mu" id="setupErr" style="margin-top:10px"></p>
   </section>
@@ -137,9 +137,12 @@ dialog::backdrop{background:#000d}
 <script>
 /* ============ Settings ============ */
 const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
-const LOC_URL='https://test.juster-5zq.pages.dev/set-location.html';              // full URL of set-location.html. Leave empty to derive it from SCAN_URL (or the same folder as this page).
+const LOC_URL='';              // full URL of set-location.html. Leave empty to derive it from SCAN_URL (or the same folder as this page).
 const BEACON_POLL_MS=3000;     // how often the laptop checks whether the phone has set the location
-const SCAN_URL='https://test.juster-5zq.pages.dev/scan.html';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
+/* true when this page is opened on a phone / tablet. A laptop or desktop has no GPS: its Wi-Fi based location can be off by hundreds of
+   meters even when it reports a small error, so on those devices the classroom location is ALWAYS set with the phone (same for every group). */
+const IS_PHONE=navigator.userAgentData?!!navigator.userAgentData.mobile:(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1));
+const SCAN_URL='';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
 const REFRESH_MS=5000;         // live feed polling interval
 
 /* ============ Helpers ============ */
@@ -190,17 +193,23 @@ $('#start').onclick=async()=>{
   try{
     let geo={},beacon=false;
     if($('#geoOn').checked){
-      b.textContent='Getting your location...';
-      try{
-        const p=await getPos();
-        if(p.acc<=GEO.maxAcc)geo={lat:p.lat,lng:p.lng,acc:p.acc};
-        else beacon=true;                          // this device is too imprecise (a laptop): use the phone as a beacon
-      }catch(e){beacon=true}                       // no location at all: same fallback, geofencing is never silently skipped
+      if(!IS_PHONE)beacon=true;                    // laptop / desktop: always use the phone as the beacon, for every group
+      else{                                        // phone: its own GPS is good enough
+        b.textContent='Getting your location...';
+        try{
+          const p=await getPos();
+          if(p.acc<=GEO.maxAcc)geo={lat:p.lat,lng:p.lng,acc:p.acc};
+          else beacon=true;                        // too imprecise: fall back to a second phone
+        }catch(e){beacon=true}                     // no location at all: same fallback, geofencing is never silently skipped
+      }
     }
     b.textContent='Starting...';
     const r=await api('startSession',{subject:$('#sub').value,group:$('#grp').value,radius:+$('#rad').value,...geo,...(beacon?{beacon:true}:{})});
-    if(r.ok){await init();r.session.pending?showBeacon(r.session):openSession(r.session)}
-    else $('#setupErr').textContent=r.msg||'Error';
+    if(r.ok){
+      await init();
+      if(r.session.pending)showBeacon(r.session);
+      else{openSession(r.session);if(r.resumed)$('#liveSub').textContent+=' - this session was already running, so it was resumed (press End Session to start a fresh one)'}
+    }else $('#setupErr').textContent=r.msg||'Error';
   }catch(e){$('#setupErr').textContent='Could not reach the server.'}
   reset();
 };
@@ -214,7 +223,7 @@ function openSession(s){
   SES=s;localStorage.setItem('tsid',s.id);seen=new Set();firstFeed=true;
   $('#setup').hidden=true;$('#live').hidden=false;
   $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
-  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m`:'Location check: off');
+  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m${s.docAcc!=null?` (classroom fix accurate to ${s.docAcc} m)`:''}`:'Location check: off');
   $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
   $('#feed').replaceChildren(el('p','empty','Waiting for students...'));
   const w=$('#actWrap');w.hidden=active.length<2;
