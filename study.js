@@ -12,21 +12,45 @@ const FOCUS = 25, BREAK = 5, LONG = 15, CYCLE = 4;      // minutes · a long bre
 const MIN = 60000, CIRC = 2 * Math.PI * 54;             // ring circumference (r = 54, see the SVG below)
 const KEY = 'portal:study', LBKEY = 'portal:study:lb';
 
-/* ---------- demo names (so the leaderboard never looks empty) ----------
-   Set SEED_ON to false to remove them. They also leave on their own: the board always shows 10 names in total,
-   so every real student who joins pushes one demo name out (the strongest first). Minutes grow through the week. */
+/* ---------- الأسماء التجريبية (Demo names) ----------
+   عشان الليدربورد ما يبانش فاضي.
+
+   كل سطر = طالب واحد:   [الاسم, الجروب, السكشن, دقايق المذاكرة في اليوم]
+
+   اللي بيظهر في الليدربورد = (الدقايق في اليوم) × (عدد الأيام اللي عدّت من الأسبوع)
+   الأسبوع بيبدأ السبت: السبت = 1 ... الجمعة = 7
+   يعني Omar (180 دقيقة = 3 ساعات في اليوم):
+       السبت 3 ساعات · الأحد 6 ساعات · الاثنين 9 ساعات ... الجمعة 21 ساعة، وبعدها الأسبوع بيبدأ من جديد.
+
+   تغيّر حاجة إزاي؟
+   • تغيير سرعة طالب  → عدّل الرقم الأخير في سطره (180 = 3 ساعات في اليوم، 120 = ساعتين، 60 = ساعة).
+   • تغيير اسم/جروب/سكشن → عدّل الكلام في نفس السطر.
+   • مسح طالب → امسح سطره كله.
+   • إضافة طالب → انسخ أي سطر والصقه تحته وغيّر بياناته (خلي الفاصلة بعد كل سطر ما عدا الأخير).
+   • قفل الأسماء التجريبية كلها → خلي SEED_ON = false.
+
+   كل طالب حقيقي بيدخل بيشيل اسم تجريبي واحد (الأقوى الأول)، فالليدربورد بيفضل دايماً بنفس عدد الأسماء. */
 const SEED_ON = true;
-const SEED = [                                        // [first name, group, section, minutes over a full week] — highest first
-  ['Omar', 7, 19, 1850], ['Mariam', 3, 8, 1625], ['Youssef', 7, 21, 1450], ['Nour', 5, 14, 1300], ['Ahmed', 1, 2, 1125],
-  ['Salma', 2, 5, 975], ['Karim', 4, 11, 825], ['Hana', 8, 23, 650], ['Mostafa', 6, 17, 475], ['Farida', 7, 19, 300]
+const SEED = [
+  // [الاسم,   جروب, سكشن, دقايق في اليوم]
+  ['Omar',     7, 19, 180],   // 3 ساعات في اليوم — الأول
+  ['Mariam',   3,  8, 160],
+  ['Youssef',  7, 21, 145],
+  ['Nour',     5, 14, 130],
+  ['Ahmed',    1,  2, 115],
+  ['Salma',    2,  5, 100],
+  ['Karim',    4, 11,  85],
+  ['Hana',     8, 23,  70],
+  ['Mostafa',  6, 17,  55],
+  ['Farida',   7, 19,  40]
 ];
 function seedRows(realCount) {
-  const need = SEED_ON ? Math.max(0, SEED.length - realCount) : 0;
-  if (!need) return [];
-  const frac = (((new Date().getDay() + 1) % 7) + 1) / 7;   // Saturday = 1/7 … Friday = 7/7
-  return SEED.slice(SEED.length - need).map(([n, g, s, w]) => {
-    const m = Math.max(25, Math.round(w * frac / 25) * 25);  // whole 25-minute sessions
-    return { n, g, s, m, c: m / 25, me: false };
+  const list = SEED.slice().sort((a, b) => b[3] - a[3]);          // الأقوى أولاً
+  if (!SEED_ON || realCount >= list.length) return [];
+  const days = ((new Date().getDay() + 1) % 7) + 1;               // Saturday = 1 … Friday = 7
+  return list.slice(realCount).map(([n, g, s, perDay]) => {       // كل طالب حقيقي بيشيل الأقوى
+    const m = perDay * days;
+    return { n, g, s, m, c: Math.max(1, Math.round(m / FOCUS)), me: false };
   });
 }
 
@@ -75,10 +99,11 @@ const skipSend = () => { try { return localStorage.getItem('isAdmin') === '1' ||
 
 /* ---------- network (same Apps Script web app as the feedback box) ---------- */
 function post(body) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);   // never hang forever
   return fetch(url(), {
-    method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    method: 'POST', mode: 'no-cors', keepalive: true, signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(Object.assign({ id: cid(), name: who(), group: me().group || '', section: me().section || '' }, body))
-  });
+  }).finally(() => clearTimeout(t));
 }
 const ping = (type, min) => { if (url() && !skipSend()) post({ type, min }).catch(() => {}); };
 
@@ -194,6 +219,7 @@ function streak() {
 }
 const todayMin = () => { const k = dayKey(now()); return st.log.reduce((a, s) => a + (dayKey(s.ts) === k ? s.m : 0), 0); };
 function stats() {
+  if (!$('#ss-day')) return;
   const w = weekKey(now()); let wk = 0;
   st.log.forEach(s => { if (weekKey(s.ts) === w) wk += s.m; });
   const k = streak();
@@ -202,7 +228,8 @@ function stats() {
   $('#ss-st').textContent = k + (k === 1 ? ' day' : ' days');
 }
 function renderLog() {
-  const box = $('#st-log'), items = st.log.slice(0, 8);
+  const box = $('#st-log'); if (!box) return;
+  const items = st.log.slice(0, 8);
   if (!items.length) { box.replaceChildren(el('p', 'empty', 'No sessions yet. Your first one starts the streak.')); return; }
   box.replaceChildren(...items.map(s => {
     const e = el('article', 'n st-l'), b = el('span', 'bell'), d = el('div');
@@ -219,7 +246,7 @@ function tile() {                                      // the Home tile
   n.textContent = r ? (r.p ? 'Paused' : (r.kind === 'focus' ? 'Focusing' : 'Break') + ' · ' + clockStr(remain(r))) : (t ? fmt(t) + ' today' : 'Focus & compete');
 }
 function setArc(p, sid) {
-  const a = $('#st-arc');
+  const a = $('#st-arc'); if (!a) return;
   if (sid !== lastSid) { a.style.transition = 'none'; lastSid = sid; }   // a new run jumps instead of sweeping backwards
   a.style.strokeDashoffset = CIRC * (1 - Math.min(1, Math.max(0, p)));
   if (a.style.transition === 'none') { void a.getBoundingClientRect(); a.style.transition = ''; }
@@ -227,15 +254,16 @@ function setArc(p, sid) {
 function paint() {
   const r = st.run, brk = !!r && r.kind !== 'focus', left = r ? remain(r) : FOCUS * MIN;
   const label = r ? (brk ? (r.kind === 'long' ? 'Long break' : 'Break') : 'Focus') : 'Ready';
+  document.title = r && !r.p ? `${clockStr(left)} · ${label}` : 'Portal';
+  tile();
   const pill = $('#st-pill');                          // floating timer when you are on another page
+  if (!pill) return;                                   // page not built yet
   pill.hidden = !r || visible();
   if (r) {
     pill.classList.toggle('brk', brk);
     pill.querySelector('b').textContent = clockStr(left);
     pill.querySelector('small').textContent = r.p ? 'Paused' : brk ? label : (r.subj || 'Focus');
   }
-  document.title = r && !r.p ? `${clockStr(left)} · ${label}` : 'Portal';
-  tile();
   if (!visible()) return;
 
   $('#st-card').className = 'st-card' + (r && !r.p && !brk ? ' run' : '') + (brk ? ' brk' : '');
@@ -256,23 +284,32 @@ function paint() {
 }
 
 function fillSubjects() {
-  const s = $('#st-sel'), opts = ['General', ...courses()];
+  const s = $('#st-sel'); if (!s) return;
+  const opts = ['General', ...courses()];
   s.replaceChildren(...opts.map(o => { const x = document.createElement('option'); x.value = x.textContent = o; return x; }));
   s.value = opts.includes(st.subj) ? st.subj : 'General';
 }
 
-/* ---------- leaderboard ---------- */
+/* ---------- leaderboard ----------
+   The board ALWAYS draws something: real rows from the server when we have them (fresh or saved),
+   and the demo names on top of that. If the server can't be reached you still see the board,
+   plus a small message under it explaining what happened. */
 function paintBoard() {
-  const d = lb, list = $('#lb-list'), you = $('#lb-me');
+  const list = $('#lb-list'), you = $('#lb-me'); if (!list || !you) return;
+  const d = lb;
   $('#lb-week').textContent = weekLabel(d ? d.week : weekKey(now()));
-  $('#lb-live').textContent = d ? (d.live ? `${d.live} studying now` : `${(d.total || 0) + seedRows(d.total || 0).length} students this week`) : '';
   $('#lb-ref').disabled = loading;
   document.querySelectorAll('#st-board .st-seg button').forEach(b => b.classList.toggle('on', b.dataset.s === scope));
   you.replaceChildren();
-  if (!url()) { list.replaceChildren(el('p', 'empty', 'The leaderboard is not set up yet.')); return; }
-  if (!d) { list.replaceChildren(el('p', 'empty', failed ? "Couldn't load the leaderboard. Check your connection and tap Refresh." : 'Loading…')); return; }
+  if (!url()) {
+    $('#lb-live').textContent = '';
+    list.replaceChildren(el('p', 'empty', 'The leaderboard is not set up yet.'));
+    return;
+  }
 
-  const real = d.rows || [], fake = seedRows(d.total || real.length);
+  const real = d && d.rows ? d.rows : [], total = d && d.total ? d.total : real.length, fake = seedRows(total);
+  $('#lb-live').textContent = d ? (d.live ? `${d.live} studying now` : `${total + fake.length} students this week`) : (loading ? 'Loading…' : '');
+
   let rows = real.concat(fake).sort((a, b) => b.m - a.m || b.c - a.c);
   if (scope === 'group' && me().group) rows = rows.filter(r => +r.g === +me().group);
   if (!rows.length) list.replaceChildren(el('p', 'empty', scope === 'group' ? 'Nobody in your group has studied this week yet.' : 'Nobody has finished a session this week yet. Be the first!'));
@@ -283,23 +320,30 @@ function paintBoard() {
     return e;
   }));
 
-  const inList = rows.some(r => r.me);                // your own position, even when you are outside the top list
-  if (d.me && !inList) you.append(el('p', 'lb-you', `Your rank this week: #${d.me.rank + fake.filter(f => f.m > d.me.m).length} · ${fmt(d.me.m)}`));
-  else if (!d.me) you.append(el('p', 'lb-you', "You haven't finished a session this week yet. Start one to join the board."));
+  if (failed) you.append(el('p', 'lb-you', "Couldn't reach the server, so real students may be missing. Check your connection and tap Refresh."));
+  if (d) {
+    const inList = rows.some(r => r.me);              // your own position, even when you are outside the top list
+    if (d.me && !inList) you.append(el('p', 'lb-you', `Your rank this week: #${d.me.rank + fake.filter(f => f.m > d.me.m).length} · ${fmt(d.me.m)}`));
+    else if (!d.me) you.append(el('p', 'lb-you', "You haven't finished a session this week yet. Start one to join the board."));
+  }
 }
 async function loadBoard() {
   if (loading) return;
   if (!url()) { paintBoard(); return; }
   loading = true; failed = false; paintBoard();
-  await flush();                                       // make sure my latest session reached the server first
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 10000);
+  // make sure my latest session reached the server first — but never wait more than 4 seconds for it
+  try { await Promise.race([flush(), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
   try {
     const r = await fetch(`${url()}?action=leaderboard&id=${encodeURIComponent(cid())}`, { cache: 'no-store', signal: ctl.signal });
     const d = await r.json();
     if (!d || !d.ok) throw new Error('bad response');
     lb = d; lbAt = now();
     try { localStorage.setItem(LBKEY, JSON.stringify(d)); } catch (e) {}
-  } catch (e) { failed = true; }
+  } catch (e) {
+    failed = true;
+    console.warn('Study Rooms: leaderboard failed to load —', e);   // open the browser Console (F12) to see why
+  }
   clearTimeout(t); loading = false;
   paintBoard(); paint();
 }
@@ -390,6 +434,8 @@ function build() {
 
 /* ---------- called by script.js ---------- */
 function open() {
+  build();                                            // in case the page wasn't ready when this file loaded
+  if (!$('#study')) return;
   fillSubjects(); settle(); lastSid = null;
   if (st.run) ensureTick();
   paint(); stats(); renderLog(); setTab(tab);
@@ -397,13 +443,15 @@ function open() {
 
 function init() {
   try {
+    build();
     settle();
     if (st.run) ensureTick();
     paint(); flush();
   } catch (e) { console.log('Study Rooms:', e); }
 }
 
-build();
+/* build as soon as the page exists (works whether this file loads in <head> or at the end of <body>) */
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
 window.Study = { open, tile };
 
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); flush(); } });
