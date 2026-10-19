@@ -15,15 +15,13 @@ const KEY = 'portal:study', LBKEY = 'portal:study:lb';
 /* ---------- الأسماء التجريبية (Demo names) ----------
    عشان الليدربورد ما يبانش فاضي.
 
-   كل سطر = طالب واحد:   [الاسم, الجروب, السكشن, دقايق المذاكرة في اليوم]
+   كل سطر = طالب واحد:   [الاسم, الجروب, السكشن, دقايق المذاكرة في الأسبوع]
 
-   اللي بيظهر في الليدربورد = (الدقايق في اليوم) × (عدد الأيام اللي عدّت من الأسبوع)
-   الأسبوع بيبدأ السبت: السبت = 1 ... الجمعة = 7
-   يعني Omar (180 دقيقة = 3 ساعات في اليوم):
-       السبت 3 ساعات · الأحد 6 ساعات · الاثنين 9 ساعات ... الجمعة 21 ساعة، وبعدها الأسبوع بيبدأ من جديد.
+   الرقم الأخير هو اللي بيظهر في الليدربورد زي ما هو (ثابت، مش بيتضرب في أي حاجة).
+   يعني Omar (210 دقيقة) بيظهر 3 ساعات ونص — وهو الأعلى.
 
    تغيّر حاجة إزاي؟
-   • تغيير سرعة طالب  → عدّل الرقم الأخير في سطره (180 = 3 ساعات في اليوم، 120 = ساعتين، 60 = ساعة).
+   • تغيير وقت طالب  → عدّل الرقم الأخير في سطره (210 = 3 ساعات ونص، 180 = 3 ساعات، 120 = ساعتين، 60 = ساعة).
    • تغيير اسم/جروب/سكشن → عدّل الكلام في نفس السطر.
    • مسح طالب → امسح سطره كله.
    • إضافة طالب → انسخ أي سطر والصقه تحته وغيّر بياناته (خلي الفاصلة بعد كل سطر ما عدا الأخير).
@@ -32,8 +30,8 @@ const KEY = 'portal:study', LBKEY = 'portal:study:lb';
    كل طالب حقيقي بيدخل بيشيل اسم تجريبي واحد (الأقوى الأول)، فالليدربورد بيفضل دايماً بنفس عدد الأسماء. */
 const SEED_ON = true;
 const SEED = [
-  // [الاسم,   جروب, سكشن, دقايق في اليوم]
-  ['Omar',     7, 19, 180],   // 3 ساعات في اليوم — الأول
+  // [الاسم,   جروب, سكشن, دقايق]
+  ['Omar',     7, 19, 210],   // 3 ساعات ونص — الأول
   ['Mariam',   3,  8, 160],
   ['Youssef',  7, 21, 145],
   ['Nour',     5, 14, 130],
@@ -47,11 +45,8 @@ const SEED = [
 function seedRows(realCount) {
   const list = SEED.slice().sort((a, b) => b[3] - a[3]);          // الأقوى أولاً
   if (!SEED_ON || realCount >= list.length) return [];
-  const days = ((new Date().getDay() + 1) % 7) + 1;               // Saturday = 1 … Friday = 7
-  return list.slice(realCount).map(([n, g, s, perDay]) => {       // كل طالب حقيقي بيشيل الأقوى
-    const m = perDay * days;
-    return { n, g, s, m, c: Math.max(1, Math.round(m / FOCUS)), me: false };
-  });
+  return list.slice(realCount).map(([n, g, s, m]) =>              // كل طالب حقيقي بيشيل الأقوى
+    ({ n, g, s, m, c: Math.max(1, Math.round(m / FOCUS)), me: false }));
 }
 
 /* ---------- tiny helpers ---------- */
@@ -90,7 +85,7 @@ try {
 } catch (e) {}
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
 
-let lb = null, lbAt = 0, tab = 'room', scope = 'all', failed = false, loading = false, tm = 0, lastSid = null;
+let lb = null, lbAt = 0, tab = 'room', scope = 'all', failed = false, failWhy = '', loading = false, tm = 0, lastSid = null;
 try { const c = JSON.parse(localStorage.getItem(LBKEY)); if (c && c.ok && c.week === weekKey(now())) lb = c; } catch (e) {}
 
 /* the name that goes on the leaderboard: first name only, or "Anonymous" */
@@ -320,7 +315,10 @@ function paintBoard() {
     return e;
   }));
 
-  if (failed) you.append(el('p', 'lb-you', "Couldn't reach the server, so real students may be missing. Check your connection and tap Refresh."));
+  if (failed) {
+    you.append(el('p', 'lb-you', "Couldn't reach the server, so real students may be missing. Check your connection and tap Refresh."));
+    if (failWhy) you.append(el('p', 'lb-you', failWhy));
+  }
   if (d) {
     const inList = rows.some(r => r.me);              // your own position, even when you are outside the top list
     if (d.me && !inList) you.append(el('p', 'lb-you', `Your rank this week: #${d.me.rank + fake.filter(f => f.m > d.me.m).length} · ${fmt(d.me.m)}`));
@@ -330,19 +328,26 @@ function paintBoard() {
 async function loadBoard() {
   if (loading) return;
   if (!url()) { paintBoard(); return; }
-  loading = true; failed = false; paintBoard();
+  loading = true; failed = false; failWhy = ''; paintBoard();
   // make sure my latest session reached the server first — but never wait more than 4 seconds for it
   try { await Promise.race([flush(), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 12000);
+  let stage = 'network';
   try {
-    const r = await fetch(`${url()}?action=leaderboard&id=${encodeURIComponent(cid())}`, { cache: 'no-store', signal: ctl.signal });
+    // plain GET with no custom options/headers (a changing number in the link replaces the cache setting)
+    const r = await fetch(`${url()}?action=leaderboard&id=${encodeURIComponent(cid())}&_=${now()}`, { signal: ctl.signal });
+    stage = 'json';
     const d = await r.json();
-    if (!d || !d.ok) throw new Error('bad response');
+    stage = 'reply';
+    if (!d || !d.ok) throw new Error((d && d.error) || 'bad response');
     lb = d; lbAt = now();
     try { localStorage.setItem(LBKEY, JSON.stringify(d)); } catch (e) {}
   } catch (e) {
     failed = true;
-    console.warn('Study Rooms: leaderboard failed to load —', e);   // open the browser Console (F12) to see why
+    failWhy = stage === 'network' ? 'Reason: no answer from the server (the Web App access must be "Anyone", and the link must be the latest deployment).'
+      : stage === 'json' ? 'Reason: the server answered with a web page, not data (the leaderboard line is missing in doGet, or the deployment is old).'
+      : 'Reason: the server replied with an error — ' + e.message;
+    console.warn('Study Rooms: leaderboard failed to load —', e);   // open the browser Console (F12) to see more
   }
   clearTimeout(t); loading = false;
   paintBoard(); paint();
