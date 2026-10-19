@@ -228,17 +228,33 @@ const Att=(()=>{
   function open(){stop();lg(KID)?home():setup()}
 
   /* first time: ID once, linked to this device for good */
-  function setup(err){
-    const inp=mk('input');inp.placeholder='Student ID';inp.inputMode='numeric';inp.autocomplete='off';
-    const msg=mk('p','amsg',err||''),go=btn('Save my ID',async()=>{
+  function setup(err,pre){
+    const inp=mk('input');inp.placeholder='Student ID';inp.inputMode='numeric';inp.autocomplete='off';inp.value=pre||'';
+    const msg=mk('p','amsg',err||''),go=btn('Continue',()=>{
       const id=norm(inp.value);if(id.length<3){msg.textContent='Enter your student ID.';return}
-      go.disabled=true;go.textContent='Checking...';
-      try{const r=await post({type:'register',id,device:dev()});
-        if(r.ok){ls(KID,id);toast('Saved'+(r.name?', '+r.name.split(' ')[0]:''));home()}
-        else{msg.textContent=r.msg||'Could not save your ID.';go.disabled=false;go.textContent='Save my ID'}
-      }catch(e){msg.textContent='No internet connection.';go.disabled=false;go.textContent='Save my ID'}
+      confirmId(id);
     });
     put(card(mk('h3','','Set up attendance'),mk('p','','Enter your student ID once. It is linked to this device permanently.'),inp,msg,go));
+  }
+
+  /* Typing the ID is not enough: the student must confirm it, because it cannot be changed and is locked to this device */
+  function confirmId(id){
+    const big=mk('div','',id);
+    big.style.cssText='font-size:32px;font-weight:700;letter-spacing:3px;text-align:center;padding:14px;border-radius:14px;border:1.5px solid var(--coral);background:var(--bg);word-break:break-all';
+    const line=t=>{const p=mk('p','',t);p.style.color='var(--tx)';return p};
+    const msg=mk('p','amsg');
+    const yes=btn('Yes, this is my ID',async()=>{
+      yes.disabled=true;yes.textContent='Checking...';
+      try{
+        const r=await post({type:'register',id,device:dev()});
+        if(r.ok){ls(KID,id);toast('Saved'+(r.name?', '+r.name.split(' ')[0]:''));home()}
+        else setup(r.msg||'Could not save your ID.',id);                    // wrong ID / device already linked: back to the form
+      }catch(e){msg.textContent='No internet connection.';yes.disabled=false;yes.textContent='Yes, this is my ID'}
+    });
+    put(card(mk('h3','','\u26A0\uFE0F Check your ID carefully'),big,
+      line('\u{1F512} Your ID cannot be changed after you confirm.'),
+      line('\u{1F4F1} It will be linked to this device permanently.'),
+      msg,yes,btn('Edit ID',()=>setup('',id),'cta ghost')));
   }
 
   /* dashboard */
