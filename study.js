@@ -17,20 +17,24 @@ const KEY = 'portal:study', LBKEY = 'portal:study:lb';
 
    كل سطر = طالب واحد:   [الاسم, الجروب, السكشن, دقايق المذاكرة في الأسبوع]
 
-   الرقم الأخير هو اللي بيظهر في الليدربورد زي ما هو (ثابت، مش بيتضرب في أي حاجة).
-   يعني Omar (210 دقيقة) بيظهر 3 ساعات ونص — وهو الأعلى.
+   الرقم الأخير = إجمالي دقايق الطالب في آخر الأسبوع (يوم الجمعة).
+   الأسبوع بيبدأ السبت، وكل يوم الرقم بيزيد شوية لحد ما يوصل يوم الجمعة للرقم اللي كتبته،
+   وبعدها مع السبت الجاي بيبدأ من الأول تاني.
+   يعني Omar (210 دقيقة) يوم الجمعة بيبقى 3 ساعات ونص — وهو الأعلى.
+   الأرقام بتطلع زي بعض عند كل الطلاب (مفيش عشوائي بيختلف من موبايل لموبايل).
+
+   الأسماء دي بتفضل موجودة دايماً في الليدربورد، حتى لو طلاب حقيقيين دخلوا.
 
    تغيّر حاجة إزاي؟
    • تغيير وقت طالب  → عدّل الرقم الأخير في سطره (210 = 3 ساعات ونص، 180 = 3 ساعات، 120 = ساعتين، 60 = ساعة).
+     خلي الرقم يقبل القسمة على 5 (مثلاً 210 أو 145) عشان يطلع مظبوط.
    • تغيير اسم/جروب/سكشن → عدّل الكلام في نفس السطر.
    • مسح طالب → امسح سطره كله.
    • إضافة طالب → انسخ أي سطر والصقه تحته وغيّر بياناته (خلي الفاصلة بعد كل سطر ما عدا الأخير).
-   • قفل الأسماء التجريبية كلها → خلي SEED_ON = false.
-
-   كل طالب حقيقي بيدخل بيشيل اسم تجريبي واحد (الأقوى الأول)، فالليدربورد بيفضل دايماً بنفس عدد الأسماء. */
+   • قفل الأسماء التجريبية كلها → خلي SEED_ON = false. */
 const SEED_ON = true;
 const SEED = [
-  // [الاسم,   جروب, سكشن, دقايق]
+  // [الاسم,   جروب, سكشن, دقايق آخر الأسبوع]
   ['Omar',     7, 19, 210],   // 3 ساعات ونص — الأول
   ['Mariam',   3,  8, 160],
   ['Youssef',  7, 21, 145],
@@ -42,11 +46,23 @@ const SEED = [
   ['Mostafa',  6, 17,  55],
   ['Farida',   7, 19,  40]
 ];
-function seedRows(realCount) {
-  const list = SEED.slice().sort((a, b) => b[3] - a[3]);          // الأقوى أولاً
-  if (!SEED_ON || realCount >= list.length) return [];
-  return list.slice(realCount).map(([n, g, s, m]) =>              // كل طالب حقيقي بيشيل الأقوى
-    ({ n, g, s, m, c: Math.max(1, Math.round(m / FOCUS)), me: false }));
+function rnd(str) {                                               // رقم بين 0 و 1 ثابت لنفس الكلمة (بدون عشوائي حقيقي)
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 15; h = Math.imul(h, 2246822507); h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+}
+function seedRows() {
+  if (!SEED_ON) return [];
+  const wk = weekKey(now());
+  const day = (new Date().getDay() + 1) % 7;                      // السبت = 0 … الجمعة = 6
+  return SEED.map(([n, g, s, goal]) => {
+    const w = Array.from({ length: 7 }, (_, i) => 0.5 + rnd(n + wk + i));   // "وزن" كل يوم: يوم يذاكر فيه أكتر ويوم أقل
+    const total = w.reduce((a, b) => a + b, 0);
+    const upto = w.slice(0, day + 1).reduce((a, b) => a + b, 0);            // مجموع الأيام لحد النهارده
+    const m = Math.round(goal * upto / total / 5) * 5;                      // الدقايق لحد النهارده (بتزيد كل يوم)
+    return { n, g, s, m, c: Math.max(1, Math.round(m / FOCUS)), me: false };
+  }).filter(r => r.m > 0);
 }
 
 /* ---------- tiny helpers ---------- */
@@ -302,7 +318,7 @@ function paintBoard() {
     return;
   }
 
-  const real = d && d.rows ? d.rows : [], total = d && d.total ? d.total : real.length, fake = seedRows(total);
+  const real = d && d.rows ? d.rows : [], total = d && d.total ? d.total : real.length, fake = seedRows();
   $('#lb-live').textContent = d ? (d.live ? `${d.live} studying now` : `${total + fake.length} students this week`) : (loading ? 'Loading…' : '');
 
   let rows = real.concat(fake).sort((a, b) => b.m - a.m || b.c - a.c);
