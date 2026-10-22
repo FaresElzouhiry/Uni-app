@@ -123,15 +123,117 @@ $('#fbsend').onclick=async()=>{
   btn.disabled=false;btn.textContent='Send feedback';
 };
 
-/* Tasks */
+/* ---------- TASKS ----------
+   Shows the course NAME (never the code), an optional due date, a High-priority flag,
+   and groups tasks into Overdue / Today / Upcoming / No due date / Completed.
+   Old tasks ({t, c, done}) keep working: they simply have no due date or priority. */
+let tkDone=false;                                          // is the "Completed" section open?
+const tkToday=()=>iso(new Date());
+const tkName=c=>c&&c!=='General'?info(c).name:'General';   // works whether c holds the course key or its name
+const tkDays=d=>Math.round((new Date(d+'T00:00')-new Date(tkToday()+'T00:00'))/864e5);
+const tkSort=(a,b)=>String(a.due||'9999').localeCompare(String(b.due||'9999'))||(b.hi?1:0)-(a.hi?1:0);
+function tkDue(t){
+  if(!t.due)return{k:'none',txt:''};
+  const n=tkDays(t.due);
+  if(n<0)return{k:'late',txt:n===-1?'Overdue · yesterday':`Overdue · ${-n} days`};
+  if(n===0)return{k:'today',txt:'Today'};
+  if(n===1)return{k:'soon',txt:'Tomorrow'};
+  return{k:n<7?'soon':'later',txt:new Date(t.due+'T00:00').toLocaleDateString('en-GB',n<7?{weekday:'long'}:{weekday:'short',day:'numeric',month:'short'})};
+}
+/* the small line under "Tasks" on the Home tile */
+function taskLine(){
+  const o=S.tasks.filter(t=>!t.done),k=tkToday();
+  if(!S.tasks.length)return'Add your first';
+  if(!o.length)return'All done';
+  const late=o.filter(t=>t.due&&t.due<k).length,td=o.filter(t=>t.due===k).length;
+  return late?`${late} overdue`:td?`${td} due today`:`${o.length} open`;
+}
+/* add / edit dialog → {t,c,due,hi} | {del:true} | null */
+function tkForm(t){
+  return new Promise(res=>{
+    const d=$('#dlg'),f=d.querySelector('form'),edit=!!t;t=t||{};
+    const title=mk('input');title.type='text';title.required=true;title.maxLength=120;title.autocomplete='off';title.placeholder='e.g. Physics assignment 3';title.value=t.t||'';
+    const keys=Object.keys(D.courses),course=mk('select');
+    course.append(...[['','General'],...keys.map(k=>[k,D.courses[k].name||k])].map(([v,n])=>{const o=mk('option','',n);o.value=v;return o}));
+    course.value=keys.includes(t.c)?t.c:'';
+    const due=mk('input');due.type='date';due.value=t.due||'';
+    const quick=mk('div','tk-q');
+    [['Today',0],['Tomorrow',1],['Next week',7],['No date',null]].forEach(([l,n])=>{
+      const b=mk('button','',l);b.type='button';
+      b.onclick=()=>{if(n===null)due.value='';else{const x=new Date();x.setDate(x.getDate()+n);due.value=iso(x)}};
+      quick.append(b);
+    });
+    const hi=mk('input');hi.type='checkbox';hi.checked=!!t.hi;
+    const wrap=(label,...n)=>{const l=mk('label');l.append(mk('span','',label),...n);return l};
+    const pr=mk('label','tk-chk');pr.append(hi,mk('span','','High priority'));
+    const row=mk('div','btns');
+    if(edit){const del=mk('button','del','Delete');del.type='button';del.onclick=()=>d.close('del');row.append(del)}
+    const no=mk('button','','Cancel');no.type='button';no.onclick=()=>d.close('no');
+    const ok=mk('button','ok',edit?'Save':'Add task');ok.type='submit';ok.value='ok';   // the only submit button, so Enter saves
+    row.append(no,ok);
+    d.onclose=()=>{const r=d.returnValue;res(r==='ok'?{t:title.value.trim(),c:course.value,due:due.value,hi:hi.checked}:r==='del'?{del:true}:null)};
+    d.oncancel=null;d.returnValue='';
+    f.replaceChildren(mk('h3','',edit?'Edit task':'New task'),wrap('Task',title),wrap('Course',course),wrap('Due date',due),quick,pr,row);
+    d.showModal();
+  });
+}
 function tasks(){
-  const rows=[...S.tasks].sort((a,b)=>a.done-b.done).map(t=>{
-    const e=item({svg:t.done?'ok':'circle',t:t.t,s:t.c,btn:'Delete',fn:()=>{S.tasks=S.tasks.filter(x=>x!==t);save();tasks()}});
-    e.classList.toggle('read',t.done);
-    e.onclick=ev=>{if(!ev.target.closest('button')){t.done=!t.done;save();tasks()}};
-    return e});
-  $('#pl').replaceChildren(item({svg:'plus',t:'Add a task',s:'Homework, revision, anything to remember',btn:'Add',
-    fn:()=>ask('New task',[{label:'Task'},{label:'Course',type:'select',opts:['General',...Object.keys(D.courses)],val:'General'}]).then(r=>{if(r&&r[0].trim()){S.tasks.unshift({t:r[0].trim(),c:r[1],done:false});save();tasks()}})}),...rows);
+  const box=$('#pl'),all=S.tasks,k=tkToday();
+  const open=all.filter(t=>!t.done).sort(tkSort),done=all.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const late=open.filter(t=>t.due&&t.due<k),today=open.filter(t=>t.due===k),next=open.filter(t=>t.due&&t.due>k),none=open.filter(t=>!t.due);
+
+  const edit=t=>tkForm(t).then(r=>{
+    if(!r)return;
+    if(r.del){S.tasks=S.tasks.filter(x=>x!==t);toast('Task deleted')}
+    else if(r.t)Object.assign(t,{t:r.t,c:r.c,due:r.due,hi:r.hi});
+    else return;
+    save();tasks();
+  });
+  const row=t=>{
+    const e=mk('article','tk'+(t.done?' done':'')+(!t.done&&t.due&&t.due<k?' late':'')),d=tkDue(t);
+    if(t.c)e.style.setProperty('--a',info(t.c).colors[0]);
+    const ck=mk('button','tk-ck');ck.type='button';ck.setAttribute('aria-label',t.done?'Mark as not done':'Mark as done');
+    ck.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.5 12.5 3.5 3.5 7.5-8"/></svg>';
+    ck.onclick=ev=>{ev.stopPropagation();t.done=!t.done;t.doneAt=t.done?Date.now():0;save();tasks()};
+    const m=mk('div','tk-m');
+    m.append(mk('span','tk-c',tkName(t.c)));
+    if(d.txt&&!t.done)m.append(mk('span','tk-d '+d.k,d.txt));
+    if(t.hi&&!t.done)m.append(mk('span','tk-p','High'));
+    const b=mk('div','tk-b');b.append(mk('b','',t.t),m);
+    e.append(ck,b);e.onclick=()=>edit(t);return e;
+  };
+  const sect=(label,list,cls)=>{
+    if(!list.length)return[];
+    const h=mk('div','tk-h'+(cls?' '+cls:''));h.append(mk('b','',label),mk('small','',String(list.length)));
+    return[h,...list.map(row)];
+  };
+
+  /* summary + add button */
+  const sum=mk('div','tk-sum'),st=mk('div','tk-st'),bar=mk('i','tk-bar'),fill=mk('b');
+  st.append(mk('b','',!all.length?'No tasks yet':!open.length?'All caught up':`${open.length} to do`),
+    mk('small','',[late.length&&`${late.length} overdue`,today.length&&`${today.length} due today`,all.length&&`${done.length} of ${all.length} done`].filter(Boolean).join(' · ')||'Homework, quizzes, anything to remember'));
+  fill.style.width=(all.length?Math.round(done.length/all.length*100):0)+'%';bar.append(fill);
+  const add=mk('button','cta','Add task');add.type='button';
+  add.onclick=()=>tkForm().then(r=>{if(r&&r.t){S.tasks.unshift({t:r.t,c:r.c,due:r.due,hi:r.hi,done:false});save();tasks()}});
+  sum.append(st,...(all.length?[bar]:[]),add);
+
+  /* completed: collapsed by default */
+  let doneEls=[];
+  if(done.length){
+    const h=mk('button','tk-h tk-tg');h.type='button';h.append(mk('b','','Completed'),mk('small','',String(done.length)),mk('span','tk-chev',tkDone?'Hide':'Show'));
+    h.onclick=()=>{tkDone=!tkDone;tasks()};
+    doneEls=[h];
+    if(tkDone){
+      doneEls.push(...done.map(row));
+      const clr=mk('button','tk-clr','Clear completed');clr.type='button';
+      clr.onclick=()=>ask('Clear completed tasks?',[],`${done.length} completed task${done.length>1?'s':''} will be deleted.`).then(r=>{if(r){S.tasks=S.tasks.filter(x=>!x.done);save();tasks()}});
+      doneEls.push(clr);
+    }
+  }
+  const empty=mk('div','tk-empty'),eic=mk('span','ic');eic.innerHTML=svg('tasks');
+  empty.append(eic,mk('b','','Nothing to do yet'),mk('span','','Add homework, quizzes or anything you don\'t want to forget.'));
+
+  box.replaceChildren(sum,...(all.length?[]:[empty]),...sect('Overdue',late,'late'),...sect('Today',today),...sect('Upcoming',next),...sect('No due date',none),...doneEls);
 }
 
 /* Exams: data.json → "exams":[{"course":"Physics (1)","title":"Midterm","date":"2026-11-10","start":"10:00","end":"11:30","room":"B8-G-41"}] */
@@ -435,7 +537,7 @@ function renderHome(){
   $('#wn').textContent=S.name||'';$('#wg').textContent=S.group?`Group ${S.group} · Section ${S.section||'–'}`:'';
   const open=S.tasks.filter(t=>!t.done).length;
   if(window.Study)Study.tile();
-  $('#tkn').textContent=open?`${open} open`:S.tasks.length?'All done':'Add your first';
+  $('#tkn').textContent=taskLine();
   renderLive();notifs();
 }
 setInterval(()=>{if(D&&view==='home')renderLive()},30000);
