@@ -304,3 +304,52 @@ dialog .chips2 label.chip{display:block;position:relative;margin:0}
 .aterms-l li{display:flex;gap:12px;align-items:flex-start}
 .aterms-l .ae{flex:none;width:26px;text-align:center;font-size:20px;line-height:1.2}
 .acode{font-size:12px!important;opacity:.7}
+/* ---------- tasks (append at the end of style.css) ---------- */
+.tk-sum{display:grid;gap:10px;padding:16px;margin-bottom:4px;border-radius:var(--r);border:1px solid var(--line);background:linear-gradient(135deg,rgba(229,32,46,.14),transparent 65%),var(--s1)}
+.tk-st b{display:block;font-size:22px;line-height:1.15}
+.tk-st small{color:var(--mu);font-size:13.5px}
+.tk-bar{display:block;height:6px;border-radius:3px;background:var(--s2);overflow:hidden}
+.tk-bar b{display:block;height:100%;border-radius:3px;background:var(--coral);transition:width .4s ease}
+.tk-sum .cta{margin-top:2px}
+
+.tk-h{display:flex;align-items:baseline;gap:8px;margin:14px 2px 0;text-align:left}
+.tk-h b{font-size:16px}
+.tk-h small{color:var(--mu);font-size:13px}
+.tk-h.late b{color:var(--coral)}
+.tk-tg{width:calc(100% - 4px);padding:0}
+.tk-chev{margin-left:auto;color:var(--mu);font-size:13px;font-weight:600}
+
+.tk{position:relative;display:flex;gap:12px;align-items:center;padding:12px 12px 12px 17px;border-radius:16px;background:var(--s1);border:1px solid var(--line);overflow:hidden;cursor:pointer;transition:opacity .2s,transform .12s}
+.tk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--a,var(--line))}
+.tk:active{transform:scale(.99)}
+.tk.late{border-color:color-mix(in srgb,var(--coral) 55%,var(--line))}
+.tk.done{opacity:.55}
+.tk.done .tk-b>b{text-decoration:line-through;text-decoration-color:var(--mu)}
+
+.tk-ck{position:relative;flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--mu);display:grid;place-items:center;transition:background .15s,border-color .15s}
+.tk-ck::after{content:"";position:absolute;inset:-10px}               /* bigger tap area */
+.tk-ck svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .15s}
+.tk.done .tk-ck{background:var(--coral);border-color:var(--coral)}
+.tk.done .tk-ck svg{opacity:1}
+
+.tk-b{flex:1;min-width:0;display:grid;gap:4px}
+.tk-b>b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:16px;line-height:1.25}
+.tk-m{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;color:var(--mu)}
+.tk-c{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.tk-c::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--a,var(--mu))}
+.tk-d.late{color:var(--coral);font-weight:700}
+.tk-d.today{color:var(--tx);font-weight:700}
+.tk-p{padding:1px 9px;border-radius:999px;background:rgba(229,32,46,.14);color:var(--coral);font-size:11.5px;font-weight:700}
+.tk-clr{justify-self:center;margin-top:8px;padding:8px 16px;border-radius:12px;border:1px solid var(--line);color:var(--mu);font-size:14px;font-weight:600}
+
+.tk-empty{display:grid;justify-items:center;gap:6px;text-align:center;padding:26px 16px;color:var(--mu);font-size:14.5px}
+.tk-empty .ic{width:56px;height:56px;border-radius:18px;margin-bottom:4px}
+.tk-empty .ic .i{width:28px;height:28px}
+.tk-empty b{color:var(--tx);font-size:19px}
+
+/* task dialog */
+.tk-q{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 6px}
+.tk-q button{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font-size:13px;font-weight:600}
+dialog label.tk-chk{display:flex;align-items:center;gap:10px;color:var(--tx);font-size:15px}
+dialog .tk-chk input{width:20px;height:20px;padding:0;accent-color:var(--coral)}
+.btns .del{margin-right:auto;color:var(--coral)}
