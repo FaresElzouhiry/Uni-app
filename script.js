@@ -290,16 +290,17 @@ const Att=(()=>{
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
   const dev=()=>{let d=lg(KDEV);if(!d){d='D'+(crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):Date.now().toString(36)+Math.random().toString(36).slice(2,12)+Math.random().toString(36).slice(2,12));ls(KDEV,d)}return d};
   const norm=s=>String(s).replace(/[\u0660-\u0669]/g,c=>c.charCodeAt(0)-0x660).replace(/[^0-9A-Za-z_-]/g,'');
-  const post=async o=>(await fetch(FEEDBACK_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)})).json();
-  const getJ=async p=>(await fetch(FEEDBACK_URL+'?'+new URLSearchParams(p))).json();
-  const loadQR=()=>window.Html5Qrcode?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';s.onload=ok;s.onerror=no;document.head.append(s)});
+   const post=async(o,ms=15000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);      // a weak network must never hang the screen
+    try{return await (await fetch(FEEDBACK_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:c.signal})).json()}finally{clearTimeout(t)}};
+  const getJ=async(p,ms=8000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);
+    try{return await (await fetch(FEEDBACK_URL+'?'+new URLSearchParams(p),{signal:c.signal})).json()}finally{clearTimeout(t)}};
 
   /* Terms: 5 short bullet points, each starts with an emoji (written as \u escapes so they survive any file encoding) */
   const TERMS=[
     ['\u{1F512}','Your ID is linked to this device permanently. One device can only be used with one student ID.'],
     ['\u2705','You can check in once per session, only while your doctor\'s session is active and only for your own group.'],
     ['\u{1F4CD}','When the location check is on, your location is read once at check-in. Only the distance is saved, never your coordinates.'],
-    ['\u{1F6AB}','Scan only the QR code shown by your doctor, and never check in for someone else.'],
+    ['\u{1F6AB}','Enter only the PIN your doctor shows in class. Never share it and never check in for someone else.'],
     ['\u{1F504}','Entered a wrong ID? Ask your doctor to reset the link for your device.']
   ];
   function terms(){
@@ -310,24 +311,12 @@ const Att=(()=>{
   }
   const foot=()=>{const b=mk('button','aterms');b.type='button';b.innerHTML=svg('about')+'<span>Terms</span>';b.onclick=terms;return b};
 
-  const put=(...n)=>$('#att').replaceChildren(...n,foot());      // every attendance screen ends with the Terms button
+  const put=(...n)=>$('#att').replaceChildren(...n.filter(Boolean),foot());      // every attendance screen ends with the Terms button
   const card=(...n)=>{const c=mk('div','attc');c.append(...n);return c};
   const btn=(txt,fn,c='cta')=>{const b=mk('button',c,txt);b.onclick=fn;return b};
   const back=()=>btn('Back',home,'cta ghost');
-  let scanner=null;
-
-  /* tells the student the REAL reason the camera did not start */
-  const camErr=e=>{
-    const t=String(e&&(e.name||e.message)||e||'');
-    if(!window.isSecureContext||!navigator.mediaDevices)return 'The camera only works on a secure (https) connection. Open the app from your https site, not from an IP address or an http link.';
-    if(/NotAllowed|Permission|denied/i.test(t))return 'Camera permission was denied. Allow camera access for this site in your browser or phone settings, then try again.';
-    if(/NotFound|Overconstrained|no camera/i.test(t))return 'No camera was found on this device.';
-    if(/NotReadable|TrackStart|in use/i.test(t))return 'The camera is being used by another app. Close it and try again.';
-    return 'Camera unavailable ('+t.slice(0,90)+').';
-  };
-
-  async function stop(){if(!scanner)return;const s=scanner;scanner=null;try{await s.stop()}catch(e){}try{s.clear()}catch(e){}}
-  function open(){stop();lg(KID)?home():setup()}
+  const stop=()=>{};                                  // kept because show() calls Att.stop(); there is no camera to close any more
+  function open(){lg(KID)?home():setup()}
 
   /* first time: ID once, linked to this device for good */
   function setup(err,pre){
@@ -359,78 +348,123 @@ const Att=(()=>{
       msg,yes,btn('Edit ID',()=>setup('',id),'cta ghost')));
   }
 
+    /* ---------- offline queue: check-ins that could not be sent wait in localStorage "pendingAttendance" ---------- */
+  const KQ='pendingAttendance',KRES='att:results',KLAST='att:last',NET_MS=15000,QUEUE_MAX_H=12;
+  const pinOf=s=>norm(s).replace(/\D/g,'').slice(0,4);           // norm() also turns Arabic-Indic digits into 0-9
+  const jget=k=>{try{const a=JSON.parse(lg(k));return Array.isArray(a)?a:[]}catch(e){return[]}};
+  const qGet=()=>jget(KQ),qSet=a=>ls(KQ,JSON.stringify(a));
+  function qAdd(p){
+    const q=qGet(),old=q.find(x=>x.subject===p.subject);
+    if(old&&old.enteredPin===p.enteredPin)return;                // same check-in tapped twice: keep the first (its time is the right one)
+    qSet([...q.filter(x=>x!==old),{...p,qid:Date.now().toString(36)+Math.random().toString(36).slice(2,6)}]);   // a corrected PIN replaces the old one
+  }
+
+  let syncing=false;
+  async function sync(){
+    if(syncing||navigator.onLine===false)return;
+    const q=qGet();if(!q.length)return;
+    syncing=true;
+    const keep=[],good=[],bad=[];
+    for(let i=0;i<q.length;i++){
+      const p=q[i];
+      if(Date.now()-p.clientTimestamp>QUEUE_MAX_H*36e5){bad.push(`${p.subject}: saved too long ago. Check in again.`);continue}
+      let r;try{r=await post(p,NET_MS)}catch(e){keep.push(...q.slice(i));break}          // still no network: keep this one and the rest
+      if(r.ok||r.code==='ALREADY')good.push(p.subject);
+      else if(r.code==='GEO_PENDING')keep.push(p);                                       // doctor still setting the location: try again later
+      else bad.push(`${p.subject}: ${r.code==='WRONG_PIN'?'wrong PIN':r.code==='TOO_FAR'?'too far from the classroom':r.msg||'not accepted'}. Check in again.`);
+    }
+    qSet([...keep,...qGet().filter(x=>!q.some(y=>y.qid===x.qid))]);                      // plus anything queued while we were sending
+    syncing=false;
+    if(bad.length)ls(KRES,JSON.stringify([...jget(KRES),...bad].slice(-10)));
+    if(good.length||bad.length)toast(bad.length?'\u274C '+bad[0]:`\u2705 ${good.length} offline check-in${good.length>1?'s':''} sent`);
+    if(view==='attendance'&&$('#att .abig'))home();                                      // refresh the dashboard if it is on screen
+  }
+
+  const qBanner=()=>{const n=qGet().length;
+    return n?card(mk('p','amsg',`\u23F3 ${n} check-in${n>1?'s':''} waiting to be sent. It is sent automatically when the network is back.`),btn('Send now',async e=>{e.target.disabled=true;await sync();home()},'cta ghost')):null};
+  const resBox=()=>{const r=jget(KRES);
+    return r.length?card(mk('h3','','Not accepted'),...r.map(t=>mk('p','amsg',t)),btn('Dismiss',()=>{ls(KRES,'[]');home()},'cta ghost')):null};
+
   /* dashboard */
   function home(){
-    stop();
     const a=mk('button','abig'),b=mk('button','abig');
-    a.append(mk('b','','Take Attendance'),mk('small','','Scan the QR code shown by your doctor'));
+    a.append(mk('b','','Take Attendance'),mk('small','','Enter the PIN shown by your doctor'));
     b.append(mk('b','','Show Attendance'),mk('small','','Your record, one subject at a time'));
-    a.onclick=take;b.onclick=history;
-    put(mk('p','alead','Student ID '+lg(KID)),a,b);
+    a.onclick=()=>take();b.onclick=history;
+    put(mk('p','alead','Student ID '+lg(KID)),resBox(),qBanner(),a,b);
   }
 
   async function subjects(){
-    let list=[];
-    try{const r=await getJ({action:'subjects'});if(r.ok){list=r.subjects;ls(KSUB,JSON.stringify(list))}}catch(e){}
-    if(!list.length)try{list=JSON.parse(lg(KSUB))||[]}catch(e){}
-    return list;
+    let list=[];try{list=JSON.parse(lg(KSUB))||[]}catch(e){}
+    const net=getJ({action:'subjects'}).then(r=>{if(r.ok&&r.subjects.length){ls(KSUB,JSON.stringify(r.subjects));return r.subjects}return list}).catch(()=>list);
+    return list.length?list:net;                                  // saved list = instant screen, even with no network
   }
 
-  /* take attendance: choose subject, scan, send */
-  async function take(){
+  /* take attendance: subject + PIN + one big button */
+  async function take(pre){
     put(card(mk('div','aspin')));
     const list=await subjects();
-    if(!list.length)return put(card(mk('p','amsg','Could not load the subjects. Check your connection.')),back());
+    if(!list.length)return put(card(mk('p','amsg','Could not load the subjects. Connect once, then try again.')),back());
+    const last=typeof pre==='string'?pre:lg(KLAST);
     const sel=mk('select');sel.append(...list.map(s=>{const o=mk('option','',s);o.value=s;return o}));
+    if(list.includes(last))sel.value=last;
     const lab=mk('label','','Subject');lab.append(sel);
-    const rd=mk('div');rd.id='areader';
     const msg=mk('p','amsg');
-    const go=btn('Open camera',async()=>{
-      msg.textContent='';
-      if(!window.isSecureContext||!navigator.mediaDevices){msg.textContent=camErr();return}
-      go.hidden=true;sel.disabled=true;
-      try{await loadQR()}catch(e){msg.textContent='Could not load the scanner. Check your connection.';go.hidden=false;sel.disabled=false;return}
-      let used=false;
-      scanner=new Html5Qrcode('areader');
-      scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:230,height:230}},async txt=>{
-        if(used)return;let p;try{p=new URL(txt).searchParams}catch(e){return}
-        const q={session:p.get('session'),subject:p.get('subject'),group:p.get('group')};
-        if(!q.session||!q.subject||!q.group)return;                 // not an attendance QR: keep scanning
-        used=true;await stop();
-        if(q.subject!==sel.value)return finish('bad','Wrong subject',`This QR is for ${q.subject}, but you selected ${sel.value}.`);
-        send(q);
-      },()=>{}).catch(e=>{msg.textContent=camErr(e);go.hidden=false;sel.disabled=false;scanner=null});
-    });
-    put(card(mk('h3','','Take Attendance'),lab,go,rd,msg),back());
+    const pin=mk('input','apin');
+    pin.inputMode='numeric';pin.maxLength=4;pin.placeholder='PIN';pin.autocomplete='off';pin.setAttribute('aria-label','4-digit PIN shown by your doctor');
+    const go=btn('Check-in Now',()=>{
+      const p=pinOf(pin.value);
+      if(p.length<4){msg.textContent='Enter the 4-digit PIN shown by your doctor.';return}
+      ls(KLAST,sel.value);checkIn(sel.value,p);
+    },'cta');
+    go.disabled=true;                                             // enabled once the PIN has 4 digits
+    pin.oninput=()=>{pin.value=pinOf(pin.value);go.disabled=pin.value.length<4;msg.textContent=''};
+    pin.onkeydown=e=>{if(e.key==='Enter'&&!go.disabled)go.click()};
+    const row=mk('div','acheck');row.append(pin,go);
+    put(card(mk('h3','','Take Attendance'),lab,mk('p','','Enter the 4-digit PIN shown by your doctor. No network? Your check-in is saved and sent automatically.'),row,msg),back());
+    setTimeout(()=>pin.focus(),60);
   }
 
-  /* location: the phone's position is read once, and only when the doctor's session asks for it */
+  /* location: the phone's position is read once, when the button is pressed (GPS works without internet) */
   const getPos=()=>new Promise((ok,no)=>{
     if(!navigator.geolocation)return no({code:0});
     navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),no,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
   });
   const geoMsg=e=>e&&e.code===1?'Location permission was denied. Allow location for this app (or site) in your phone settings, then try again.':e&&e.code===3?'Could not get your location in time. Turn on GPS, move near a window, then try again.':'Your device could not provide a location. Turn on Location (GPS) and try again.';
-  async function locate(q){
-    put(card(mk('h3','','Getting your location...'),mk('p','','Allow location access if your phone asks.'),mk('div','aspin')));
-    try{send(q,await getPos())}catch(e){finish('bad','Location needed',geoMsg(e),()=>locate(q),'GEO_'+(e&&e.code))}
+
+  async function checkIn(subject,pin){
+    const id=lg(KID);
+    if(!id)return setup();                                        // not linked to this device yet
+    const t0=Date.now();                                          // the moment the button was pressed: an offline check-in is judged by this time
+    put(card(mk('h3','','Checking you in...'),mk('p','','Allow location access if your phone asks.'),mk('div','aspin')));
+    let pos=null,ge=null;
+    try{pos=await getPos()}catch(e){ge=e}                         // no GPS: still try, the server says whether this session needs a location
+    const p={type:'attend',id,device:dev(),subject,enteredPin:pin,clientTimestamp:t0,...(pos||{})};
+    let r=null;
+    try{if(navigator.onLine===false)throw 0;r=await post(p,NET_MS)}catch(e){}      // no network, timeout or unreadable reply: r stays null
+    if(r)return result(r,p,ge);
+    if(!pos)return finish('bad','\u274C Location needed',geoMsg(ge)+' It is also needed to save a check-in while offline.',()=>checkIn(subject,pin),'GEO_'+(ge&&ge.code));
+    qAdd({...p,queued:true});
+    finish('info','\u2705 Saved locally (Offline)','Could not reach the server. Your check-in is saved on this phone and is sent automatically when the connection is back. Keep the app open, or open it again later.');
   }
 
-  async function send(q,pos){
-    put(card(mk('h3','','Checking you in...'),mk('div','aspin')));
-    try{
-      const r=await post({type:'attend',id:lg(KID),device:dev(),...q,...(pos||{})});
-      if(r.ok)finish('ok','Checked in',`${q.subject} - Group ${q.group}`);
-      else if(r.code==='NEED_LOCATION'&&!pos)locate(q);                         // this session checks the location
-      else if(['TOO_FAR','LOW_ACCURACY','BAD_LOCATION','NEED_LOCATION'].includes(r.code))finish('bad','Location check failed',r.msg,()=>locate(q),r.code);
-      else if(r.code==='GEO_PENDING')finish('info','Almost ready',r.msg,()=>send(q));          // the doctor is still setting the location
-      else finish(r.code==='ALREADY'?'info':'bad',r.code==='ALREADY'?'Already checked in':'Check-in failed',r.msg,null,r.code);
-    }catch(e){finish('bad','No internet connection','Check your connection and scan again.')}
+  function result(r,p,ge){
+    const again=()=>checkIn(p.subject,p.enteredPin),c=r.code;
+    if(r.ok)return finish('ok','\u2705 Success',`${p.subject} - checked in`);
+    if(c==='WRONG_PIN')return finish('bad','\u274C Wrong PIN',r.msg,()=>take(p.subject),c);
+    if(c==='PIN_LOCKED')return finish('bad','\u274C Too many wrong PINs',r.msg,null,c);
+    if(c==='TOO_FAR')return finish('bad','\u274C Too far',r.msg,again,c);
+    if(['LOW_ACCURACY','BAD_LOCATION','NEED_LOCATION'].includes(c))return finish('bad','\u274C Location check failed',c==='NEED_LOCATION'&&ge?geoMsg(ge):r.msg,again,c);
+    if(c==='GEO_PENDING')return finish('info','Almost ready',r.msg,again,c);        // the doctor is still setting the location
+    if(c==='ALREADY')return finish('info','\u2705 Already checked in',r.msg,null,c);
+    finish('bad','\u274C Check-in failed',r.msg,null,c);
   }
+
   function finish(kind,title,sub,retry,code){
     const c=card(mk('span'),mk('h3','',title),mk('p','',sub||''));c.className='attc ares '+kind;
     if(code&&kind!=='ok')c.append(mk('p','acode','Code: '+code));                 // the exact reason, in case something fails
     c.firstChild.innerHTML=svg(kind==='ok'?'ok':'about');
-    put(c,btn(retry?'Try again':'Scan again',retry||take),back());
+    put(c,btn(retry?'Try again':'Check in again',retry||take),back());
   }
 
   /* show attendance: a list of subjects; each one opens on its own screen */
@@ -461,8 +495,15 @@ const Att=(()=>{
     put(head,...(s.sessions.length?[list]:[]),btn('All subjects',()=>subjectList(r),'cta ghost'));
   }
 
-  return{open,stop};
+    return{open,stop,sync};
 })();
+
+/* a check-in that could not be sent is retried when the network is back, when the app is reopened, and every 30 s while it is open */
+const syncPendingAttendance=()=>Att.sync();
+window.addEventListener('online',syncPendingAttendance);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncPendingAttendance()});
+setInterval(syncPendingAttendance,30000);
+syncPendingAttendance();
 function show(v){
   if(v!=='attendance')Att.stop();
   if(v!==view)$('main').scrollTop=0;

@@ -59,6 +59,10 @@ dialog::backdrop{background:#000d}
 #qrLink{word-break:break-all;font-size:12px;color:var(--mu)}
 .warn{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid #e0a800;color:#e0a800;font-size:13.5px;text-align:left}
 #st{position:fixed;bottom:10px;right:10px;font-size:12px;color:var(--mu);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+.pinbox{margin-top:14px;padding:16px;border-radius:16px;background:var(--card2);text-align:center}
+#pinVal{font-size:68px;line-height:1.05;font-weight:700;letter-spacing:12px;padding-left:12px;margin:4px 0 12px;font-variant-numeric:tabular-nums}
+.pinbox .row{justify-content:center}
+.pinbox .chk{flex:none;min-width:0}
 [hidden]{display:none!important}
 @media(prefers-reduced-motion:reduce){.it.new{animation:none}}
 </style>
@@ -96,9 +100,17 @@ dialog::backdrop{background:#000d}
       <h2 class="grow" id="liveTitle"></h2><span class="badge">Active</span>
     </div>
     <p class="mu" id="liveSub"></p>
+        <div class="pinbox">
+      <span class="mu">Check-in PIN</span>
+      <div id="pinVal" aria-live="polite">----</div>
+      <div class="row">
+        <button class="ghost" id="pinNew">Refresh PIN</button>
+        <label class="chk"><input type="checkbox" id="pinAuto" checked><b>Auto-refresh every 60 s</b></label>
+        <span class="mu" id="pinCd"></span>
+      </div>
+    </div>
     <div class="row" style="margin-top:14px">
-      <button id="showQR" class="grow">Show QR</button>
-      <button class="ghost" id="endS">End Session</button>
+      <button class="ghost grow" id="endS">End Session</button>
     </div>
     <label id="actWrap" style="margin-top:12px" hidden><span>Other active sessions</span><select id="actSel"></select></label>
     <div class="stats">
@@ -115,13 +127,7 @@ dialog::backdrop{background:#000d}
   </section>
 </main>
 
-<dialog id="qrDlg">
-  <h2 id="qrTitle"></h2>
-  <div id="qr"></div>
-  <p id="qrLink"></p>
-  <p id="qrWarn" class="warn" hidden></p>
-  <button class="ghost" id="qrClose" style="margin-top:16px;width:100%">Close</button>
-</dialog>
+
 
 <!-- Phone as a beacon: shown when this device cannot give an accurate location -->
 <dialog id="bDlg">
@@ -144,6 +150,7 @@ const BEACON_POLL_MS=3000;     // how often the laptop checks whether the phone 
 const IS_PHONE=navigator.userAgentData?!!navigator.userAgentData.mobile:(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1));
 const SCAN_URL='';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
 const REFRESH_MS=5000;         // live feed polling interval
+const PIN_ROTATE_S=60;         // auto-refresh interval of the check-in PIN
 
 /* ============ Helpers ============ */
 const $=s=>document.querySelector(s);
@@ -222,6 +229,7 @@ $('#endS').onclick=async()=>{
 function openSession(s){
   SES=s;localStorage.setItem('tsid',s.id);seen=new Set();firstFeed=true;
   $('#setup').hidden=true;$('#live').hidden=false;
+    pinSeen='';pinAt=Date.now();showPin(s.pin);if(!s.pin)newPin();   // sessions started before the update have no PIN yet
   $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
   $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m${s.docAcc!=null?` (classroom fix accurate to ${s.docAcc} m)`:''}`:'Location check: off');
   $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
@@ -233,23 +241,7 @@ function openSession(s){
 $('#actSel').onchange=e=>{const s=active.find(a=>a.id===e.target.value);if(s)s.pending?showBeacon(s):openSession(s)};
 function closeView(){SES=null;$('#live').hidden=true;$('#setup').hidden=false}
 
-/* ============ Show QR ============ */
-function showAttendanceQR(){
-  if(!SES)return;
-  const u=new URL(SCAN_URL||'scan.html',location.href);
-  u.search=new URLSearchParams({session:SES.id,subject:SES.subject,group:SES.group});
-  $('#qrTitle').textContent=`${SES.subject} - Group ${SES.group}`;
-  const q=$('#qr');q.replaceChildren();
-  new QRCode(q,{text:u.href,width:300,height:300,correctLevel:QRCode.CorrectLevel.M});
-  $('#qrLink').textContent=u.href;
-  /* a QR that points to localhost / a LAN address / a file cannot be opened by a student's phone ("This site can't be reached") */
-  const local=u.protocol==='file:'||/^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(u.hostname)||/\.local$/.test(u.hostname);
-  const w=$('#qrWarn');w.hidden=!local;
-  if(local)w.textContent=`This QR points to "${u.host||'a local file'}", which students' phones cannot open. Set SCAN_URL at the top of teacher.html to the live https address of scan.html (for example https://your-site.com/scan.html), then reload this page.`;
-  $('#qrDlg').showModal();
-}
-$('#showQR').onclick=showAttendanceQR;
-$('#qrClose').onclick=()=>$('#qrDlg').close();
+
 
 /* ============ Phone as a beacon: the doctor's phone sets the classroom location ============ */
 let beaconSes=null,beaconTimer=null,beaconBusy=false;
@@ -282,7 +274,7 @@ async function checkBeacon(){
     if(!s.pending&&s.geo){                                         // the phone has set the location
       stopBeacon();
       const i=active.findIndex(a=>a.id===s.id);if(i>=0)active[i]=s;else active.unshift(s);
-      openSession(s);showAttendanceQR();                           // close the modal, show the student QR automatically
+            openSession(s);                                              // close the modal, show the live screen with the PIN
       return;
     }
     $('#bMsg').textContent=r.expired?'This code expired. Cancel the session and start again.':'Waiting for your phone...';
@@ -295,7 +287,31 @@ $('#bCancel').onclick=async()=>{
   SES=null;init();
 };
 $('#bDlg').addEventListener('cancel',e=>e.preventDefault());       // Esc must not leave a half-started session behind
-
+/* ============ Check-in PIN ============ */
+let pinSeen='',pinAt=0,pinBusy=false;
+function showPin(p){
+  p=String(p||'');
+  if(p!==pinSeen){pinSeen=p;pinAt=Date.now()}      // a new PIN restarts the countdown
+  $('#pinVal').textContent=p||'----';
+}
+async function newPin(){
+  if(!SES||pinBusy)return;
+  pinBusy=true;pinAt=Date.now();$('#pinNew').disabled=true;
+  try{
+    const r=await api('refresh_pin',{session:SES.id});
+    if(r.code==='AUTH'||r.code==='LOCKED'){store.del('tk');KEY='';showLogin(r.msg)}
+    else if(r.ok){SES.pin=r.pin;showPin(r.pin)}
+    else status(r.msg||'Could not refresh the PIN');
+  }catch(e){status('Connection lost. Retrying...')}
+  pinBusy=false;$('#pinNew').disabled=false;
+}
+$('#pinNew').onclick=newPin;
+setInterval(()=>{
+  if(!SES||$('#live').hidden)return;
+  const on=$('#pinAuto').checked,left=Math.max(0,PIN_ROTATE_S-Math.floor((Date.now()-pinAt)/1000));
+  $('#pinCd').textContent=on?`next in ${left} s`:'';
+  if(on&&left===0)newPin();
+},1000);
 /* ============ Absent list toggle ============ */
 $('#absBtn').onclick=()=>{const w=$('#absWrap'),open=w.hidden;w.hidden=!open;$('#absBtn').setAttribute('aria-expanded',open)};
 
@@ -308,6 +324,7 @@ async function refresh(){
     if(!d.ok){status(d.msg||'Error');return}
     if(!d.active){status('Session ended');init();return}
     $('#cnt').textContent=d.count;$('#nTotal').textContent=d.total;$('#nAbs').textContent=d.absent;
+        if(d.session&&d.session.pin&&!pinBusy){SES.pin=d.session.pin;showPin(d.session.pin)}    // keeps a second tab in sync
     $('#absL').replaceChildren(...(d.absentees.length?d.absentees.map(a=>{
       const it=el('div','it');it.append(el('b','idc',a.id),el('span','nm',a.name));return it}):[el('p','empty',d.total?'Everyone has checked in.':'No students found for this group in the Students sheet.')]));
     $('#feed').replaceChildren(...(d.feed.length?d.feed.map(x=>{
