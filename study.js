@@ -1,7 +1,8 @@
 /* Study Rooms — study.js
    A personal focus room: Pomodoro (25 min study + 5 min break), every finished session is saved,
    and a weekly leaderboard adds up each student's own minutes. Rooms are solo — everyone scores alone.
-   The Chat tab lets students talk in General, their group and their section (backend: Chat.gs).
+   The Chat tab lets students talk in General, their group and their section (backend: Chat.gs),
+   and send photos (compressed here, stored in Google Drive by Media.gs).
 
    Needs script.js (S, D, CID, FEEDBACK_URL, toast, ask, svg, go). Safe to load before or after it:
    nothing here touches those at load time, only when the student actually uses the room. */
@@ -109,13 +110,17 @@ try { const c = JSON.parse(localStorage.getItem(LBKEY)); if (c && c.ok && c.week
 const who = () => (st.cfg.anon ? 'Anonymous' : (String(me().name || '').trim().split(/\s+/)[0] || 'Student').slice(0, 16));
 const skipSend = () => { try { return localStorage.getItem('isAdmin') === '1' || new URLSearchParams(location.search).get('admin') === '1'; } catch (e) { return false; } };
 
-/* ---------- network (same Apps Script web app as the feedback box) ---------- */
-function post(body) {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);   // never hang forever
-  return fetch(url(), {
-    method: 'POST', mode: 'no-cors', keepalive: true, signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+/* ---------- network (same Apps Script web app as the feedback box) ----------
+   Normal calls are fire-and-forget (no-cors + keepalive). A photo call (big = true) is a normal request:
+   browsers cap keepalive bodies at 64 KB, and we want to read the server's answer (for example "photo limit reached"). */
+function post(body, big) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), big ? 60000 : 15000);   // never hang forever
+  const opt = {
+    method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(Object.assign({ id: cid(), name: who(), group: me().group || '', section: me().section || '' }, body))
-  }).finally(() => clearTimeout(t));
+  };
+  if (!big) { opt.mode = 'no-cors'; opt.keepalive = true; }
+  return fetch(url(), opt).finally(() => clearTimeout(t));
 }
 const ping = (type, min) => { if (url() && !skipSend()) post({ type, min }).catch(() => {}); };
 
@@ -381,6 +386,12 @@ if (!Array.isArray(cs.muted)) cs.muted = [];
 if (!Array.isArray(cs.rep)) cs.rep = [];
 const cpersist = () => { try { localStorage.setItem(CKEY, JSON.stringify(cs)); } catch (e) {} };
 
+const localImg = {}, imgEls = {};                               // localImg[cmid] = my own photo preview · imgEls = <img> kept between re-renders (no flicker)
+let chPin = true;                                               // is the list pinned to the bottom? (a photo finishing its load must keep it there)
+const PHOTO = '\uD83D\uDCF7';                                   // 📷 = what the server stores when a photo has no caption (never shown)
+const capOf = x => ((x.i || x.p) && x.x === PHOTO ? '' : x.x);
+const okImg = u => (/^https:\/\/drive\.google\.com\/thumbnail\?id=[\w-]{10,}&sz=w\d{3,4}$/.test(u || '') ? u : '');
+
 const cbox = {}, outbox = [];                                   // cbox[room] = {msgs, last, loaded}
 let myUid = '', ctm = 0, cpolling = false, cfail = 0, clast = 0, csel = '', cnew = 0, csent = 0;
 const bx = r => cbox[r] || (cbox[r] = { msgs: [], last: 0, loaded: false });
@@ -425,18 +436,21 @@ function chNewPill() {
 
 /* ----- drawing the messages ----- */
 function chRow(x, cont) {
+  const pic = !!(x.i || x.p);
   const r = el('div', 'ch-r' + (x.mine ? ' mine' : '') + (cont ? ' cont' : '') + (x.st === 'sending' ? ' pend' : x.st === 'failed' ? ' fail' : ''));
   if (!x.mine) {
     const a = el('span', 'ch-av' + (cont ? ' sp' : ''), (x.n || '?').charAt(0).toUpperCase());
     a.style.setProperty('--h', hue(x.u || x.n)); r.append(a);
   }
-  const w = el('div', 'ch-bw'), b = el('div', 'ch-b');
+  const w = el('div', 'ch-bw'), b = el('div', 'ch-b' + (pic ? ' pic' : ''));
   if (!x.mine && !cont) {
     const h = el('div', 'ch-h'); h.append(el('b', '', x.n));
     if (x.g || x.s) h.append(el('small', '', `G${x.g || '–'} · S${x.s || '–'}`));
     b.append(h);
   }
-  const t = el('p', 'ch-x', x.x); t.dir = 'auto'; b.append(t);       // dir=auto → Arabic lines read right-to-left by themselves
+  if (pic) b.append(chImg(x));
+  const cap = capOf(x);
+  if (cap || !pic) { const t = el('p', 'ch-x', cap); t.dir = 'auto'; b.append(t); }   // dir=auto → Arabic lines read right-to-left by themselves
   const tm = el('div', 'ch-t'); tm.append(el('time', '', hm(x.t)));
   if (x.mine) tm.append(el('span', '', x.st === 'sending' ? '…' : x.st === 'failed' ? '!' : '✓'));
   b.append(tm);
@@ -450,10 +464,10 @@ function chActs(x) {
   const add = (t, f, c) => { const b = el('button', c || '', t); b.type = 'button'; b.onclick = e => { e.stopPropagation(); f(); }; a.append(b); };
   if (x.st === 'failed') {
     add('Retry', () => chRetry(x.o));
-    add('Delete', () => { const i = outbox.indexOf(x.o); if (i >= 0) outbox.splice(i, 1); csel = ''; chRender(false); }, 'rd');
+    add('Delete', () => { const i = outbox.indexOf(x.o); if (i >= 0) { if (x.o.prev) URL.revokeObjectURL(x.o.prev); outbox.splice(i, 1); } csel = ''; chRender(false); }, 'rd');
     return a;
   }
-  add('Copy', () => chCopy(x.x));
+  if (capOf(x)) add('Copy', () => chCopy(capOf(x)));
   if (!x.mine && x.st === 'ok') { add('Report', () => chReport(x), 'rd'); add('Hide ' + (x.n || 'person'), () => chMute(x)); }
   return a;
 }
@@ -463,9 +477,9 @@ function chRender(stick) {
   const b = bx(cs.room), keep = list.scrollTop, near = list.scrollHeight - list.scrollTop - list.clientHeight < 90, v = [];
   b.msgs.forEach(m => {
     if (cs.muted.includes(m.u) || cs.rep.includes(cs.room + ':' + m.t)) return;
-    v.push({ key: 'm' + m.t, mine: !!myUid && m.u === myUid, n: m.n, g: m.g, s: m.s, u: m.u, x: m.x, t: m.t, st: 'ok' });
+    v.push({ key: 'm' + m.t, k: m.k, mine: !!myUid && m.u === myUid, n: m.n, g: m.g, s: m.s, u: m.u, x: m.x, i: okImg(m.i), p: localImg[m.k], t: m.t, st: 'ok' });
   });
-  outbox.forEach(o => { if (o.room === cs.room) v.push({ key: 'o' + o.k, mine: true, n: who(), u: myUid || 'me', x: o.x, t: o.t0, st: o.st, o }); });
+  outbox.forEach(o => { if (o.room === cs.room) v.push({ key: 'o' + o.k, k: o.k, mine: true, n: who(), u: myUid || 'me', x: o.x, p: o.prev, t: o.t0, st: o.st, o }); });
   if (!v.length) { list.replaceChildren(el('p', 'ch-empty', b.loaded ? 'No messages yet.\nSay hi 👋' : 'Loading messages…')); chNewPill(); return; }
   const rows = []; let prev = null;
   v.forEach(x => {
@@ -475,7 +489,7 @@ function chRender(stick) {
     prev = x;
   });
   list.replaceChildren(...rows);
-  if (stick || near) { list.scrollTop = list.scrollHeight; cnew = 0; } else list.scrollTop = keep;
+  if (stick || near) { list.scrollTop = list.scrollHeight; cnew = 0; chPin = true; } else { list.scrollTop = keep; chPin = false; }
   chNewPill();
 }
 
@@ -514,11 +528,95 @@ function chSend() {
   outbox.push(m); ta.value = ''; chInput(); chPost(m); csel = ''; chRender(true);
   setTimeout(chPoll, 1800); setTimeout(chPoll, 4200); setTimeout(chExpire, 31000); chLoop();
 }
-function chRetry(m) { m.st = 'sending'; chPost(m); csel = ''; chRender(true); setTimeout(chPoll, 2000); setTimeout(chExpire, 31000); }
-function chExpire() {                                            // never came back from the server → let the student retry
+function chRetry(m) {
+  m.st = 'sending'; (m.blob ? chPostImg : chPost)(m); csel = ''; chRender(true);
+  setTimeout(chPoll, m.blob ? 4000 : 2000); setTimeout(chExpire, m.blob ? 76000 : 31000);
+}
+function chExpire() {                                            // never came back from the server → let the student retry (photos get longer)
   let c = false;
-  outbox.forEach(o => { if (o.st === 'sending' && now() - o.t0 > 30000) { o.st = 'failed'; c = true; } });
+  outbox.forEach(o => { if (o.st === 'sending' && now() - o.t0 > (o.blob ? 75000 : 30000)) { o.st = 'failed'; c = true; } });
   if (c && chatVisible()) chRender(false);
+}
+
+/* ----- photos -----
+   The photo is shrunk on the phone (longest side 1024 px, JPEG, about 100–300 KB) so it fits an Apps Script request,
+   sent as base64, saved in Google Drive by Media.gs, and only its link is stored in the sheet. */
+const IMG_SIDE = 1024, IMG_QUAL = [0.72, 0.6, 0.5, 0.4], IMG_GOAL = 280 * 1024, IMG_HARD = 450 * 1024;   // longest side · JPEG quality steps · target size · hard limit
+const IMG_ERR = { fast: 'Slow down a little', rate: 'Too many messages — wait a minute', banned: "You can't send messages", room: "You can't write in this room",
+  big: 'Photo is too large', limit: 'Photo limit reached. Try again later', upload: 'Photo upload failed. Try again', busy: 'Server is busy. Try again' };
+const cleanTxt = s => s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAXLEN);
+const jpg = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+const toB64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(blob); });
+function loadImg(f) {
+  return new Promise((ok, no) => {
+    const u = URL.createObjectURL(f), i = new Image();
+    i.onload = () => { URL.revokeObjectURL(u); ok(i); };
+    i.onerror = () => { URL.revokeObjectURL(u); no(new Error('unreadable')); };
+    i.src = u;
+  });
+}
+async function shrink(file) {                                    // resize + re-encode as JPEG (this also removes EXIF / GPS data)
+  const img = await loadImg(file), W = img.naturalWidth, H = img.naturalHeight;
+  if (!W || !H) throw new Error('empty');
+  let k = Math.min(1, IMG_SIDE / Math.max(W, H)), blob = null;
+  for (let round = 0; round < 3; round++, k *= 0.75) {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);   // white behind transparent PNGs
+    for (const q of IMG_QUAL) { blob = await jpg(c, q); if (blob && blob.size <= IMG_GOAL) return { blob }; }
+  }
+  if (blob && blob.size <= IMG_HARD) return { blob };
+  throw new Error('too big');
+}
+async function chPick(e) {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';      // reset, so the same photo can be picked again
+  if (!f || !url()) return;
+  if (!/^image\//.test(f.type)) { say('Please choose a photo'); return; }
+  if (now() - csent < 4000) { say('Slow down a little'); return; }
+  const room = cs.room, clip = $('#ch-clip'); let p;
+  if (clip) clip.disabled = true;
+  try { p = await shrink(f); } catch (err) { if (clip) clip.disabled = false; say("Couldn't use that photo"); return; }
+  if (clip) clip.disabled = false;
+  const ta = $('#ch-in'), caption = cleanTxt(ta.value);                    // whatever is typed in the box becomes the caption
+  csent = clast = now();
+  const m = { k: uid(), room, x: caption, t0: csent, st: 'sending', blob: p.blob, prev: URL.createObjectURL(p.blob) };
+  ta.value = ''; chInput(); outbox.push(m); csel = ''; chRender(true); chPostImg(m);
+  setTimeout(chPoll, 3000); setTimeout(chPoll, 7000); setTimeout(chExpire, 76000); chLoop();
+}
+async function chPostImg(m) {
+  m.t0 = now();
+  try {
+    const r = await post({ type: 'chat_send', room: m.room, text: m.x, cmid: m.k, img: await toB64(m.blob) }, true);
+    const j = await r.json().catch(() => null);
+    if (j && j.ok === false && m.st === 'sending') { m.st = 'failed'; say(j.msg || IMG_ERR[j.error] || "Photo couldn't be sent"); if (chatVisible()) chRender(false); }
+  } catch (e) { /* no readable answer is fine: the poll shows whether it arrived, and chExpire marks it failed if not */ }
+}
+function chImg(x) {                                              // one <img> per message, re-attached on every render (so nothing flickers)
+  const src = x.p || x.i, id = x.k || x.key;
+  let im = imgEls[id];
+  if (!im) {
+    if (Object.keys(imgEls).length > 80) for (const k in imgEls) delete imgEls[k];
+    im = imgEls[id] = el('img', 'ch-img'); im.alt = 'Photo'; im.decoding = 'async'; im.draggable = false; im.referrerPolicy = 'no-referrer';
+    im.onload = () => { if (chPin) { const l = $('#ch-list'); if (l) l.scrollTop = l.scrollHeight; } };   // keep the chat at the bottom when a photo finishes loading
+    im.onerror = () => {
+      if (!im.dataset.r && !/^blob:/.test(im.dataset.s)) { im.dataset.r = '1'; setTimeout(() => { im.src = im.dataset.s + '&r=1'; }, 2500); }   // Drive can need a moment
+      else im.classList.add('bad');
+    };
+  }
+  if (im.dataset.s !== src) { im.dataset.s = src; im.src = src; }
+  im.onclick = e => { e.stopPropagation(); chView(x); };
+  return im;
+}
+function chView(x) {                                             // full-screen viewer (tap anywhere to close)
+  const o = el('div', 'ch-lb'), im = el('img'), bar = el('div', 'ch-lbar'), close = el('button', '', 'Close');
+  im.src = x.p || x.i; close.type = 'button'; bar.append(close);
+  if (!x.mine && x.st === 'ok') {
+    const rp = el('button', 'rd', 'Report'); rp.type = 'button';
+    rp.onclick = e => { e.stopPropagation(); o.remove(); chReport(x); }; bar.append(rp);
+  }
+  o.onclick = () => o.remove(); o.append(im, bar);
+  ($('#app') || document.body).append(o);
 }
 
 /* ----- receiving ----- */
@@ -527,7 +625,8 @@ function chMerge(room, arr) {
   arr.forEach(m => {
     if (b.msgs.some(x => x.t === m.t)) return;
     b.msgs.push(m); added++; if (m.u !== myUid) others++;
-    const i = outbox.findIndex(o => o.k === m.k); if (i >= 0) outbox.splice(i, 1);   // my message came back → delivered
+    const i = outbox.findIndex(o => o.k === m.k);                // my message came back → delivered
+    if (i >= 0) { if (outbox[i].prev) localImg[m.k] = outbox[i].prev; outbox.splice(i, 1); }   // a photo keeps my local preview, so it doesn't flash
   });
   if (added) {
     b.msgs.sort((a, c) => a.t - c.t);
@@ -573,7 +672,8 @@ function chOpen() {
   setTimeout(() => { if (chatVisible()) chRender(true); }, 0);   // the page may only become visible a moment after this call
 }
 
-/* ----- look (injected here, so no CSS file has to change) ----- */
+/* ----- look (injected here, so no CSS file has to change) -----
+   The photo styles (.ch-clip, .ch-img, .ch-lb …) are in style.css */
 const CHAT_CSS = `
 #study .st-tabs{display:grid;grid-template-columns:repeat(3,1fr)}
 #st-chat{display:flex;flex-direction:column;margin-top:10px;min-height:300px;
@@ -727,6 +827,8 @@ function build() {
     </div>`;
   injectCss();
   main.append(sec);
+  const tc = document.getElementById('t-chclip');                  // the photo button + file picker live in index.html (<template id="t-chclip">)
+  if (tc) sec.querySelector('.ch-bar').prepend(tc.content.cloneNode(true));
 
   const set = $('#st-set');
   set.append(toggleRow('bell', 'Sound', 'A chime when a session ends', 'st-snd'), toggleRow('user', 'Show my name', 'On the leaderboard (first name only)', 'st-anon'));
@@ -746,13 +848,20 @@ function build() {
   $('#ch-agree').onclick = () => { cs.ok = true; cpersist(); chOpen(); };
   $('#ch-un').onclick = () => { cs.muted = []; cpersist(); chHeader(); chRender(false); };
   $('#ch-new').onclick = () => { const l = $('#ch-list'); cnew = 0; chNewPill(); l.scrollTo({ top: l.scrollHeight, behavior: 'smooth' }); };
-  $('#ch-list').addEventListener('scroll', e => { const l = e.target; if (cnew && l.scrollHeight - l.scrollTop - l.clientHeight < 90) { cnew = 0; chNewPill(); } });
+  $('#ch-list').addEventListener('scroll', e => {
+    const l = e.target, near = l.scrollHeight - l.scrollTop - l.clientHeight < 90;
+    chPin = near; if (cnew && near) { cnew = 0; chNewPill(); }
+  });
   $('#ch-in').oninput = chInput;
   $('#ch-in').onkeydown = e => {                                   // computer: Enter sends, Shift+Enter = new line. Phone: Enter = new line, use the arrow
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(pointer:fine)').matches) { e.preventDefault(); chSend(); }
   };
   $('#ch-send').onclick = chSend;
   $('#ch-send').addEventListener('pointerdown', e => e.preventDefault());   // keep the keyboard open when you tap send
+  if ($('#ch-clip') && $('#ch-file')) {                            // photo button (from the template in index.html)
+    $('#ch-clip').onclick = () => $('#ch-file').click();
+    $('#ch-file').onchange = chPick;
+  }
 
   const pill = el('button', 'st-pill'); pill.id = 'st-pill'; pill.type = 'button'; pill.hidden = true; pill.setAttribute('aria-label', 'Open Study Rooms');
   pill.innerHTML = '<span class="dot"></span><b></b><small></small>';
