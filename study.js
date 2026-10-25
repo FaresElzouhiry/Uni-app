@@ -635,6 +635,15 @@ function chMerge(room, arr) {
   }
   return { added, others };
 }
+function chPrune(room, ids, serverNow) {                         // a message you hid / deleted in the sheet must disappear from the chat too
+  if (!Array.isArray(ids)) return false;                         // (an older server doesn't send the list)
+  const b = bx(room), keep = new Set(ids), cut = (serverNow || now()) - 15000;   // a message younger than 15 s is never dropped (it may still be on its way to the cache)
+  const gone = m => !keep.has(m.t) && m.t <= cut && (!ids.length || m.t >= ids[0]);   // only the part of the room the server still lists can be checked
+  const n = b.msgs.length;
+  b.msgs = b.msgs.filter(m => !gone(m));
+  if (b.msgs.length === n) return false;
+  csel = ''; return true;
+}
 async function chPoll() {
   if (cpolling || !url() || !cs.ok || !chatVisible() || document.hidden) return;
   cpolling = true;
@@ -645,8 +654,9 @@ async function chPoll() {
     if (!d || !d.ok) throw new Error((d && d.error) || 'bad response');
     cfail = 0; if (d.you) myUid = d.you;
     const res = chMerge(room, d.msgs || []); b.loaded = true;
+    const gone = chPrune(room, d.ids, d.now);
     chExpire();
-    if (room === cs.room && (res.added || first)) {
+    if (room === cs.room && (res.added || gone || first)) {
       const l = $('#ch-list');
       if (res.others && l && l.scrollHeight - l.scrollTop - l.clientHeight >= 90) cnew += res.others;   // you are reading older messages → show the "new" button
       chRender(first);
