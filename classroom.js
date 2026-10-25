@@ -3,9 +3,9 @@
 (function hook(){
   if(typeof show!=='function'||typeof mk!=='function'||typeof svg!=='function')return setTimeout(hook,40);   // wait for script.js
 
-  const CLIENT_ID='259622968598-1c2b6g4nuav5b8gh2eslbugevmou4o0l.apps.googleusercontent.com';
-  const SCOPES=['courses.readonly','coursework.me.readonly','courseworkmaterials.readonly'].map(s=>'https://www.googleapis.com/auth/classroom.'+s).join(' ');
-  const API='https://classroom.googleapis.com/v1/',KD='gc:data';
+  const CLIENT_ID='PASTE_YOUR_CLIENT_ID.apps.googleusercontent.com';
+  const SCOPES=['courses.readonly','coursework.me.readonly','courseworkmaterials.readonly','announcements.readonly'].map(s=>'https://www.googleapis.com/auth/classroom.'+s).join(' ');
+  const API='https://classroom.googleapis.com/v1/',KD='gc:data2';
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
   const cached=()=>{try{const d=JSON.parse(lg(KD));return d&&Array.isArray(d.courses)?d:null}catch(e){return null}};
   const put=(...n)=>$('#gc').replaceChildren(...n.filter(Boolean));
@@ -46,14 +46,17 @@
   async function load(){
     const cs=await all('courses','courses',{studentId:'me',courseStates:'ACTIVE'});
     const out=await Promise.all(cs.map(async c=>{
-      const[w,m,s]=await Promise.all([
-        all(`courses/${c.id}/courseWork`,'courseWork').catch(()=>[]),
-        all(`courses/${c.id}/courseWorkMaterials`,'courseWorkMaterial').catch(()=>[]),
-        all(`courses/${c.id}/courseWork/-/studentSubmissions`,'studentSubmissions',{userId:'me'}).catch(()=>[])]);
+      const err={},part=(k,path,key,q)=>all(path,key,q).catch(e=>{err[k]=String(e&&e.message||e).slice(0,140);return[]});
+      const[w,m,a,s]=await Promise.all([
+        part('Assignments',`courses/${c.id}/courseWork`,'courseWork'),
+        part('Materials',`courses/${c.id}/courseWorkMaterials`,'courseWorkMaterial'),
+        part('Posts',`courses/${c.id}/announcements`,'announcements'),
+        part('Submissions',`courses/${c.id}/courseWork/-/studentSubmissions`,'studentSubmissions',{userId:'me'})]);
       const st={};s.forEach(x=>st[x.courseWorkId]=x);
       return{id:c.id,name:c.name,sec:c.section||'',link:c.alternateLink,
         work:w.map(x=>({t:x.title,u:x.alternateLink,due:due(x),done:['TURNED_IN','RETURNED'].includes((st[x.id]||{}).state)})),
-        mats:m.map(x=>({t:x.title,u:x.alternateLink,at:Date.parse(x.updateTime)||0,f:files(x.materials)}))};
+        mats:m.map(x=>({t:x.title,u:x.alternateLink,at:Date.parse(x.updateTime)||0,f:files(x.materials)})),
+        ann:a.map(x=>{const f=files(x.materials),t=String(x.text||'').trim().split('\n')[0];return{t:(t||(f[0]&&f[0].t)||'Post').slice(0,110),u:x.alternateLink,at:Date.parse(x.updateTime)||0,f}}),err};
     }));
     return{at:Date.now(),courses:out};
   }
@@ -66,6 +69,8 @@
   const tint=(el,c)=>{let h=0;for(const ch of String(c.id||c.name))h=(h*31+ch.charCodeAt(0))%360;el.style.setProperty('--a',`hsl(${h} 58% 46%)`)};
   const ini=n=>(String(n).replace(/[^A-Za-z0-9\u0600-\u06FF ]/g,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('')||'C').toUpperCase();
   const chips=s=>[s.miss&&mk('span','gc-chip bad',`${s.miss} missing`),s.todo&&mk('span','gc-chip hot',`${s.todo} to do`),!s.miss&&!s.todo&&mk('span','gc-chip ok','All clear')].filter(Boolean);
+  const cnt=(k,x)=>x.length&&mk('span','gc-chip',`${x.length} ${k}${x.length>1?'s':''}`);
+  const extra=c=>[cnt('material',c.mats),cnt('post',c.ann||[]),Object.keys(c.err||{}).length&&mk('span','gc-chip bad','Load problem')].filter(Boolean);
   const nice=m=>/access_denied/.test(m)?'Access was denied. Your university may block this app, or your account has not been added yet.'
     :/popup/.test(m)?'The sign-in window was closed or blocked. Allow pop-ups for this site and try again.':m;
 
@@ -79,7 +84,7 @@
     hero.append(top,sum);
     const cards=d.courses.map(c=>{
       const b=btn('gc-c','',()=>course(d,c)),bd=mk('div','gc-cb'),bg=mk('div','gc-bg'),av=mk('span','gc-av',ini(c.name));
-      tint(b,c);bg.append(...chips(stats([c])));
+      tint(b,c);bg.append(...(c.work.length?chips(stats([c])):[]),...extra(c));if(!bg.children.length)bg.append(mk('span','gc-chip','Nothing posted yet'));
       bd.append(mk('b','',c.name),...(c.sec?[mk('small','',c.sec)]:[]),bg);
       b.append(av,bd,ic('gc-go','chev'));return b;
     });
@@ -103,7 +108,7 @@
     h.append(mk('small','',c.sec||'Course'),mk('b','',c.name),btn('gc-open','Open in Classroom',()=>ext(c.link)));
     const back=btn('gc-back','',()=>list(d));back.innerHTML=ICON.back+'<span>Courses</span>';
     const tabs=mk('div','gc-tabs');
-    [['work','Assignments',c.work.length],['mat','Materials',c.mats.length]].forEach(([k,l,n])=>{
+    [['work','Assignments',c.work.length],['mat','Materials',c.mats.length],['post','Posts',(c.ann||[]).length]].forEach(([k,l,n])=>{
       const b=btn('gc-tab'+(k===tab?' on':''),'',()=>course(d,c,k));b.append(mk('span','',l),mk('i','',String(n)));tabs.append(b)});
     const body=mk('div','gc-list');
     if(tab==='work'){
@@ -112,12 +117,17 @@
        ['Done','ok',c.work.filter(w=>w.done).sort((a,b)=>b.due-a.due)]].forEach(([l,k,a])=>{
         if(!a.length)return;const g=mk('div','gc-gh',l);g.append(mk('i','',String(a.length)));body.append(g,...a.map(w=>wrow(w,k)));
       });
-      if(!c.work.length)body.append(mk('p','gc-empty','No assignments posted yet.'));
-    }else{
+      if(!c.work.length)body.append(mk('p','gc-empty','No assignments posted yet.'+(c.mats.length||(c.ann||[]).length?' Check Materials and Posts.':'')));
+    }else if(tab==='mat'){
       c.mats.forEach(m=>body.append(mrow(m)));
       if(!c.mats.length)body.append(mk('p','gc-empty','No materials posted yet.'));
+    }else{
+      (c.ann||[]).slice(0,80).forEach(m=>body.append(mrow(m)));
+      if(!(c.ann||[]).length)body.append(mk('p','gc-empty','No posts in the Stream yet.'));
     }
-    put(back,h,tabs,body);
+    const bad=Object.entries(c.err||{}),warn=bad.length?mk('div','gc-warn'):null;
+    if(warn)warn.append(mk('b','','Some parts could not load'),...bad.map(([k,v])=>mk('small','',k+': '+v)));
+    put(back,h,warn,tabs,body);
   }
 
   async function sync(){

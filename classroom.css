@@ -38,9 +38,9 @@
 .gc-ch small{font-size:13px;opacity:.85}
 .gc-ch b{font-size:22px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
 .gc-open{justify-self:start;margin-top:10px;padding:9px 14px;border:0;border-radius:12px;background:rgba(255,255,255,.22);color:#fff;font-size:13px;font-weight:600}
-.gc-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;border:1px solid var(--gb);background:var(--gs)}
-.gc-tab{display:flex;justify-content:center;align-items:center;gap:8px;padding:10px;border:0;border-radius:10px;background:none;font-weight:600;opacity:.7}
-.gc-tab i{font-style:normal;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--gb)}
+.gc-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;border:1px solid var(--gb);background:var(--gs)}
+.gc-tab{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:5px;padding:10px 2px;font-size:13.5px;border:0;border-radius:10px;background:none;font-weight:600;opacity:.7}
+.gc-tab i{font-style:normal;font-size:12px;padding:1px 6px;border-radius:99px;background:var(--gb)}
 .gc-tab.on{background:var(--coral);color:#fff;opacity:1}
 .gc-tab.on i{background:rgba(255,255,255,.28)}
 
@@ -75,3 +75,8 @@
 .gc-link{justify-self:center;margin-top:6px;padding:10px;border:0;background:none;font-size:13px;text-decoration:underline;opacity:.55}
 .gc-empty{margin:0;padding:28px 10px;text-align:center;font-size:14px;opacity:.6}
 @media(prefers-reduced-motion:reduce){.gc-spin{animation-duration:2.4s}}
+
+/* shown inside a course when part of its data could not be loaded */
+.gc-warn{display:grid;gap:3px;padding:12px 14px;border-radius:14px;border:1px solid var(--red);background:rgba(239,68,68,.08)}
+.gc-warn b{font-size:14px}
+.gc-warn small{font-size:12px;opacity:.75;overflow-wrap:anywhere}
