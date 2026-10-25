@@ -3,7 +3,7 @@
 (function hook(){
   if(typeof show!=='function'||typeof mk!=='function'||typeof svg!=='function')return setTimeout(hook,40);   // wait for script.js
 
-  const CLIENT_ID='PASTE_YOUR_CLIENT_ID.apps.googleusercontent.com';
+  const CLIENT_ID='259622968598-1c2b6g4nuav5b8gh2eslbugevmou4o0l.apps.googleusercontent.com';
   const SCOPES=['courses.readonly','coursework.me.readonly','courseworkmaterials.readonly','announcements.readonly'].map(s=>'https://www.googleapis.com/auth/classroom.'+s).join(' ');
   const API='https://classroom.googleapis.com/v1/',KD='gc:data2';
   const lg=k=>{try{return localStorage.getItem(k)}catch(e){return null}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
