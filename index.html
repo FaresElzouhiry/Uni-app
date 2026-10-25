@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=6" onerror="this.onerror=null;this.href='style.css?v=6'"><meta name="theme-color" content="#0a0a0a">
 <link rel="stylesheet" href="css/study.css?v=1" onerror="this.onerror=null;this.href='study.css?v=1'">
+<link rel="stylesheet" href="css/classroom.css?v=1" onerror="this.onerror=null;this.href='classroom.css?v=1'">
 <meta name="theme-color" content="#0a0a0a">
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
@@ -152,6 +153,9 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
     <!-- ATTENDANCE (student): the content is drawn by the Att block in script.js -->
     <section id="attendance" class="view" hidden><div id="att"></div></section>
 
+    <!-- SIS: Google Classroom courses, drawn by js/classroom.js -->
+    <section id="sis" class="view" hidden><div id="gc"></div></section>
+
     <section id="wip" class="view" hidden>
       <div class="soon">
         <span id="wipi" class="ic"></span>
@@ -188,5 +192,6 @@ setTimeout(function(){document.documentElement.classList.add('ready')},4000);   
 
 <script src="js/script.js?v=9" onerror="var s=document.createElement('script');s.src='script.js?v=9';document.body.appendChild(s)"></script>
 <script src="js/study.js?v=3" onerror="var s=document.createElement('script');s.src='study.js?v=3';document.body.appendChild(s)"></script>
+<script src="js/classroom.js?v=1" onerror="var s=document.createElement('script');s.src='classroom.js?v=1';document.body.appendChild(s)"></script>
 </body>
 </html>
