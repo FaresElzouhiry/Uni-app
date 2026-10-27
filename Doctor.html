@@ -66,8 +66,8 @@ dialog::backdrop{background:#000d}
 <body>
 
 <section id="login" class="card" hidden>
-  <h1>Doctor Dashboard</h1>
-  <input id="keyIn" type="password" placeholder="Doctor key" autocomplete="current-password">
+  <h1>Teacher Dashboard</h1>
+  <input id="keyIn" type="password" placeholder="Teacher key" autocomplete="current-password">
   <button id="keyGo">Sign in</button>
   <p class="mu" id="loginErr"></p>
 </section>
@@ -85,7 +85,7 @@ dialog::backdrop{background:#000d}
       <label class="chk"><input type="checkbox" id="geoOn" checked><b>Verify student location</b></label>
       <label><span>Allowed distance</span><select id="rad"></select></label>
     </div>
-    <p class="mu" style="margin-top:8px">The classroom location is this device's position when you press Start. If it is not accurate enough (a laptop, for example), you will be asked to set it with your phone instead.</p>
+    <p class="mu" style="margin-top:8px">For every new session, in every group, you set the classroom location by scanning a QR code with your phone.</p>
     <button class="big" id="start">Start Session</button>
     <p class="mu" id="setupErr" style="margin-top:10px"></p>
   </section>
@@ -130,16 +130,17 @@ dialog::backdrop{background:#000d}
   <div id="bQr"></div>
   <p class="mu" id="bMsg">Waiting for your phone...</p>
   <p id="bWarn" class="warn" hidden></p>
-  <button class="ghost" id="bCancel" style="margin-top:16px;width:100%">Cancel session</button>
+  <button class="ghost" id="bHere" style="margin-top:12px;width:100%">Using a phone? Set the location from this device</button>
+  <button class="ghost" id="bCancel" style="margin-top:10px;width:100%">Cancel session</button>
 </dialog>
 <div id="st" hidden>-</div>
 
 <script>
 /* ============ Settings ============ */
 const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
-const LOC_URL='https://test.juster-5zq.pages.dev/set-location.html';              // full URL of set-location.html. Leave empty to derive it from SCAN_URL (or the same folder as this page).
+const LOC_URL='';              // full URL of set-location.html. Leave empty to derive it from SCAN_URL (or the same folder as this page).
 const BEACON_POLL_MS=3000;     // how often the laptop checks whether the phone has set the location
-const SCAN_URL='https://test.juster-5zq.pages.dev/scan.html';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
+const SCAN_URL='';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
 const REFRESH_MS=5000;         // live feed polling interval
 
 /* ============ Helpers ============ */
@@ -177,28 +178,22 @@ async function init(){
 }
 
 /* ============ Start / end ============ */
-/* the classroom location = this device's position when the session starts */
-const getPos=()=>new Promise((ok,no)=>{
-  if(!navigator.geolocation)return no({code:0});
-  navigator.geolocation.getCurrentPosition(p=>ok({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),no,{enableHighAccuracy:true,timeout:20000,maximumAge:0});
-});
 function fillRadius(){const r=$('#rad');if(r.children.length)return;[50,100,150,200,300,500].forEach(m=>{const o=el('option','',m+' m');o.value=m;o.selected=m===GEO.defaultRadius;r.append(o)})}
 
 $('#start').onclick=async()=>{
   const b=$('#start');b.disabled=true;$('#setupErr').textContent='';
   const reset=()=>{b.disabled=false;b.textContent='Start Session'};
   try{
-    let geo={},beacon=false;
-    if($('#geoOn').checked){
-      b.textContent='Getting your location...';
-      try{
-        const p=await getPos();
-        if(p.acc<=GEO.maxAcc)geo={lat:p.lat,lng:p.lng,acc:p.acc};
-        else beacon=true;                          // this device is too imprecise (a laptop): use the phone as a beacon
-      }catch(e){beacon=true}                       // no location at all: same fallback, geofencing is never silently skipped
+    const sub=$('#sub').value,grp=$('#grp').value;
+    /* a session for this subject + group is already running: starting again means a NEW lecture, so ask before ending the old one */
+    const running=active.find(a=>a.subject===sub&&a.group===grp);
+    if(running&&!confirm(`A session for ${sub} - Group ${grp} is already running.\n\nOK = end it and start a NEW session (you will set the classroom location again)\nCancel = go back to the running session`)){
+      running.pending?showBeacon(running):openSession(running);
+      return reset();
     }
+    const beacon=$('#geoOn').checked;              // location check on = the classroom location is ALWAYS set with the phone QR, every session
     b.textContent='Starting...';
-    const r=await api('startSession',{subject:$('#sub').value,group:$('#grp').value,radius:+$('#rad').value,...geo,...(beacon?{beacon:true}:{})});
+    const r=await api('startSession',{subject:sub,group:grp,radius:+$('#rad').value,fresh:true,...(beacon?{beacon:true}:{})});
     if(r.ok){await init();r.session.pending?showBeacon(r.session):openSession(r.session)}
     else $('#setupErr').textContent=r.msg||'Error';
   }catch(e){$('#setupErr').textContent='Could not reach the server.'}
@@ -214,7 +209,7 @@ function openSession(s){
   SES=s;localStorage.setItem('tsid',s.id);seen=new Set();firstFeed=true;
   $('#setup').hidden=true;$('#live').hidden=false;
   $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
-  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m`:'Location check: off');
+  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m${s.docAcc!=null?` (classroom fix accurate to ${s.docAcc} m)`:''}`:'Location check: off');
   $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
   $('#feed').replaceChildren(el('p','empty','Waiting for students...'));
   const w=$('#actWrap');w.hidden=active.length<2;
@@ -243,7 +238,7 @@ $('#showQR').onclick=showAttendanceQR;
 $('#qrClose').onclick=()=>$('#qrDlg').close();
 
 /* ============ Phone as a beacon: the doctor's phone sets the classroom location ============ */
-let beaconSes=null,beaconTimer=null,beaconBusy=false;
+let beaconSes=null,beaconTimer=null,beaconBusy=false,beaconHref='';
 const isLocalUrl=u=>u.protocol==='file:'||/^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(u.hostname)||/\.local$/.test(u.hostname);
 
 function showBeacon(s){
@@ -251,6 +246,7 @@ function showBeacon(s){
   const base=LOC_URL||(SCAN_URL?SCAN_URL.replace(/scan\.html.*$/,'set-location.html'):'set-location.html');
   const u=new URL(base,location.href);
   u.search=new URLSearchParams({sessionId:s.id,k:s.token});       // k = one-time token, dies as soon as the location is set
+  beaconHref=u.href;
   const q=$('#bQr');q.replaceChildren();
   new QRCode(q,{text:u.href,width:260,height:260,correctLevel:QRCode.CorrectLevel.M});
   const w=$('#bWarn');w.hidden=!isLocalUrl(u);
@@ -285,6 +281,7 @@ $('#bCancel').onclick=async()=>{
   if(s){try{await api('endSession',{session:s.id})}catch(e){}}
   SES=null;init();
 };
+$('#bHere').onclick=()=>{if(beaconHref)window.open(beaconHref,'_blank')};      // doctor on a phone: open the same page here, then come back to this tab
 $('#bDlg').addEventListener('cancel',e=>e.preventDefault());       // Esc must not leave a half-started session behind
 
 /* ============ Absent list toggle ============ */
