@@ -94,6 +94,3 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
 })();
-<script>
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-</script>
