@@ -353,3 +353,20 @@ dialog .chips2 label.chip{display:block;position:relative;margin:0}
 dialog label.tk-chk{display:flex;align-items:center;gap:10px;color:var(--tx);font-size:15px}
 dialog .tk-chk input{width:20px;height:20px;padding:0;accent-color:var(--coral)}
 .btns .del{margin-right:auto;color:var(--coral)}
+
+/* ---------- Study Rooms chat: photos ---------- */
+.ch-clip{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);background:var(--s1);color:var(--mu)}
+.ch-clip:active{transform:scale(.94)}
+.ch-clip:disabled{opacity:.4}
+.ch-b.pic{padding:4px 4px 5px}
+.ch-b.pic .ch-x{padding:4px 7px 0}
+.ch-b.pic .ch-t{padding:0 6px}
+.ch-b.pic .ch-h{padding:2px 7px 0}
+.ch-img{display:block;width:200px;max-width:100%;max-height:300px;height:auto;aspect-ratio:auto 4/3;object-fit:cover;border-radius:8px;background:var(--s2);cursor:zoom-in;-webkit-touch-callout:none}
+.ch-img.bad{min-height:90px}
+.ch-lb{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.92)}
+.ch-lb>img{max-width:100%;max-height:calc(100% - 70px);object-fit:contain;border-radius:8px}
+.ch-lbar{display:flex;gap:10px}
+.ch-lbar button{padding:9px 20px;border-radius:999px;background:#ffffff1f;color:#fff;font-size:15px;font-weight:600}
+.ch-lbar .rd{color:#ff7b85}

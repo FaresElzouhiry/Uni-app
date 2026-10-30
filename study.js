@@ -1,6 +1,8 @@
 /* Study Rooms — study.js
    A personal focus room: Pomodoro (25 min study + 5 min break), every finished session is saved,
    and a weekly leaderboard adds up each student's own minutes. Rooms are solo — everyone scores alone.
+   The Chat tab lets students talk in General, their group and their section (backend: Chat.gs),
+   and send photos (compressed here, stored in Google Drive by Media.gs).
 
    Needs script.js (S, D, CID, FEEDBACK_URL, toast, ask, svg, go). Safe to load before or after it:
    nothing here touches those at load time, only when the student actually uses the room. */
@@ -108,13 +110,17 @@ try { const c = JSON.parse(localStorage.getItem(LBKEY)); if (c && c.ok && c.week
 const who = () => (st.cfg.anon ? 'Anonymous' : (String(me().name || '').trim().split(/\s+/)[0] || 'Student').slice(0, 16));
 const skipSend = () => { try { return localStorage.getItem('isAdmin') === '1' || new URLSearchParams(location.search).get('admin') === '1'; } catch (e) { return false; } };
 
-/* ---------- network (same Apps Script web app as the feedback box) ---------- */
-function post(body) {
-  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);   // never hang forever
-  return fetch(url(), {
-    method: 'POST', mode: 'no-cors', keepalive: true, signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+/* ---------- network (same Apps Script web app as the feedback box) ----------
+   Normal calls are fire-and-forget (no-cors + keepalive). A photo call (big = true) is a normal request:
+   browsers cap keepalive bodies at 64 KB, and we want to read the server's answer (for example "photo limit reached"). */
+function post(body, big) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), big ? 60000 : 15000);   // never hang forever
+  const opt = {
+    method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(Object.assign({ id: cid(), name: who(), group: me().group || '', section: me().section || '' }, body))
-  }).finally(() => clearTimeout(t));
+  };
+  if (!big) { opt.mode = 'no-cors'; opt.keepalive = true; }
+  return fetch(url(), opt).finally(() => clearTimeout(t));
 }
 const ping = (type, min) => { if (url() && !skipSend()) post({ type, min }).catch(() => {}); };
 
@@ -369,11 +375,380 @@ async function loadBoard() {
   paintBoard(); paint();
 }
 
+/* ---------- chat ----------
+   Rooms: General (everyone) · your group · your section. Messages go out as a POST (like the sessions) and come back
+   through a light GET poll every few seconds while the Chat tab is open. A message you send shows as "sending" until the
+   server returns it; if it never comes back it turns red and you can retry (the server ignores duplicates). */
+const CKEY = 'portal:study:chat', MAXLEN = 400;
+let cs = { ok: false, muted: [], rep: [], room: 'all' };       // saved on the phone: rules accepted, hidden people, reported messages, last room
+try { const o = JSON.parse(localStorage.getItem(CKEY)); if (o && typeof o === 'object') cs = Object.assign(cs, o); } catch (e) {}
+if (!Array.isArray(cs.muted)) cs.muted = [];
+if (!Array.isArray(cs.rep)) cs.rep = [];
+const cpersist = () => { try { localStorage.setItem(CKEY, JSON.stringify(cs)); } catch (e) {} };
+
+const localImg = {}, imgEls = {};                               // localImg[cmid] = my own photo preview · imgEls = <img> kept between re-renders (no flicker)
+let chPin = true;                                               // is the list pinned to the bottom? (a photo finishing its load must keep it there)
+const PHOTO = '\uD83D\uDCF7';                                   // 📷 = what the server stores when a photo has no caption (never shown)
+const capOf = x => ((x.i || x.p) && x.x === PHOTO ? '' : x.x);
+const okImg = u => (/^https:\/\/drive\.google\.com\/thumbnail\?id=[\w-]{10,}&sz=w\d{3,4}$/.test(u || '') ? u : '');
+
+const cbox = {}, outbox = [];                                   // cbox[room] = {msgs, last, loaded}
+let myUid = '', ctm = 0, cpolling = false, cfail = 0, clast = 0, csel = '', cnew = 0, csent = 0;
+const bx = r => cbox[r] || (cbox[r] = { msgs: [], last: 0, loaded: false });
+const chatVisible = () => visible() && tab === 'chat';
+const hm = ts => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+const dayLabel = ts => {
+  const k = dayKey(ts), t = now();
+  if (k === dayKey(t)) return 'Today';
+  if (k === dayKey(t - 864e5)) return 'Yesterday';
+  return new Date(ts).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+};
+const hue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const yes = async (t, s) => (typeof ask === 'function' ? await ask(t, [], s) : confirm(t));
+
+function chRoomList() {
+  const g = +me().group || 0, s = +me().section || 0, r = [{ k: 'all', t: 'General' }];
+  if (g) r.push({ k: 'g' + g, t: 'Group ' + g });
+  if (s) r.push({ k: 's' + s, t: 'Section ' + s });
+  return r;
+}
+function chRooms() {
+  const box = $('#ch-rooms'); if (!box) return;
+  const rs = chRoomList();
+  if (!rs.some(r => r.k === cs.room)) cs.room = 'all';
+  box.replaceChildren(...rs.map(r => {
+    const b = el('button', r.k === cs.room ? 'on' : '', r.t); b.type = 'button';
+    b.onclick = () => { if (cs.room === r.k) return; cs.room = r.k; cpersist(); csel = ''; cnew = 0; chRooms(); chHeader(); chRender(true); chLoop(true); };
+    return b;
+  }));
+  const ta = $('#ch-in'); if (ta) ta.placeholder = 'Message ' + rs.find(r => r.k === cs.room).t + '…';
+}
+function chHeader() {
+  const s = $('#ch-st'); if (!s) return;
+  s.className = 'ch-st' + (cfail ? ' off' : '');
+  s.textContent = cfail ? 'Offline — retrying…' : bx(cs.room).loaded ? 'Live' : 'Connecting…';
+  const u = $('#ch-un'); u.hidden = !cs.muted.length; u.textContent = `Hidden people: ${cs.muted.length} · Show them`;
+}
+function chNewPill() {
+  const p = $('#ch-new'); if (!p) return;
+  p.hidden = !cnew; p.textContent = cnew + (cnew === 1 ? ' new message ↓' : ' new messages ↓');
+}
+
+/* ----- drawing the messages ----- */
+function chRow(x, cont) {
+  const pic = !!(x.i || x.p);
+  const r = el('div', 'ch-r' + (x.mine ? ' mine' : '') + (cont ? ' cont' : '') + (x.st === 'sending' ? ' pend' : x.st === 'failed' ? ' fail' : ''));
+  if (!x.mine) {
+    const a = el('span', 'ch-av' + (cont ? ' sp' : ''), (x.n || '?').charAt(0).toUpperCase());
+    a.style.setProperty('--h', hue(x.u || x.n)); r.append(a);
+  }
+  const w = el('div', 'ch-bw'), b = el('div', 'ch-b' + (pic ? ' pic' : ''));
+  if (!x.mine && !cont) {
+    const h = el('div', 'ch-h'); h.append(el('b', '', x.n));
+    if (x.g || x.s) h.append(el('small', '', `G${x.g || '–'} · S${x.s || '–'}`));
+    b.append(h);
+  }
+  if (pic) b.append(chImg(x));
+  const cap = capOf(x);
+  if (cap || !pic) { const t = el('p', 'ch-x', cap); t.dir = 'auto'; b.append(t); }   // dir=auto → Arabic lines read right-to-left by themselves
+  const tm = el('div', 'ch-t'); tm.append(el('time', '', hm(x.t)));
+  if (x.mine) tm.append(el('span', '', x.st === 'sending' ? '…' : x.st === 'failed' ? '!' : '✓'));
+  b.append(tm);
+  b.onclick = () => { csel = csel === x.key ? '' : x.key; chRender(false); };
+  w.append(b);
+  if (csel === x.key) w.append(chActs(x));
+  r.append(w); return r;
+}
+function chActs(x) {
+  const a = el('div', 'ch-acts');
+  const add = (t, f, c) => { const b = el('button', c || '', t); b.type = 'button'; b.onclick = e => { e.stopPropagation(); f(); }; a.append(b); };
+  if (x.st === 'failed') {
+    add('Retry', () => chRetry(x.o));
+    add('Delete', () => { const i = outbox.indexOf(x.o); if (i >= 0) { if (x.o.prev) URL.revokeObjectURL(x.o.prev); outbox.splice(i, 1); } csel = ''; chRender(false); }, 'rd');
+    return a;
+  }
+  if (capOf(x)) add('Copy', () => chCopy(capOf(x)));
+  if (!x.mine && x.st === 'ok') { add('Report', () => chReport(x), 'rd'); add('Hide ' + (x.n || 'person'), () => chMute(x)); }
+  return a;
+}
+function chRender(stick) {
+  const list = $('#ch-list'); if (!list) return;
+  if (!url()) { list.replaceChildren(el('p', 'ch-empty', 'Chat is not set up yet.')); return; }
+  const b = bx(cs.room), keep = list.scrollTop, near = list.scrollHeight - list.scrollTop - list.clientHeight < 90, v = [];
+  b.msgs.forEach(m => {
+    if (cs.muted.includes(m.u) || cs.rep.includes(cs.room + ':' + m.t)) return;
+    v.push({ key: 'm' + m.t, k: m.k, mine: !!myUid && m.u === myUid, n: m.n, g: m.g, s: m.s, u: m.u, x: m.x, i: okImg(m.i), p: localImg[m.k], t: m.t, st: 'ok' });
+  });
+  outbox.forEach(o => { if (o.room === cs.room) v.push({ key: 'o' + o.k, k: o.k, mine: true, n: who(), u: myUid || 'me', x: o.x, p: o.prev, t: o.t0, st: o.st, o }); });
+  if (!v.length) { list.replaceChildren(el('p', 'ch-empty', b.loaded ? 'No messages yet.\nSay hi 👋' : 'Loading messages…')); chNewPill(); return; }
+  const rows = []; let prev = null;
+  v.forEach(x => {
+    const sameDay = !!prev && dayKey(prev.t) === dayKey(x.t);
+    if (!sameDay) rows.push(el('div', 'ch-day', dayLabel(x.t)));
+    rows.push(chRow(x, sameDay && prev.mine === x.mine && prev.u === x.u && x.t - prev.t < 180000));
+    prev = x;
+  });
+  list.replaceChildren(...rows);
+  if (stick || near) { list.scrollTop = list.scrollHeight; cnew = 0; chPin = true; } else { list.scrollTop = keep; chPin = false; }
+  chNewPill();
+}
+
+/* ----- actions on a message ----- */
+async function chCopy(t) {
+  try { await navigator.clipboard.writeText(t); say('Copied'); } catch (e) { say("Couldn't copy"); }
+  csel = ''; chRender(false);
+}
+async function chReport(x) {
+  if (!(await yes('Report this message?', 'It will be sent to the admin for review.'))) return;
+  cs.rep.push(cs.room + ':' + x.t); if (cs.rep.length > 200) cs.rep.shift(); cpersist();
+  post({ type: 'chat_report', room: cs.room, t: x.t }).catch(() => {});
+  csel = ''; chRender(false); say('Reported — thank you');
+}
+async function chMute(x) {
+  if (!(await yes('Hide messages from ' + x.n + '?', 'You will stop seeing them on this phone. You can undo it any time.'))) return;
+  if (!cs.muted.includes(x.u)) cs.muted.push(x.u);
+  cpersist(); csel = ''; chHeader(); chRender(false);
+}
+
+/* ----- sending ----- */
+function chInput() {
+  const ta = $('#ch-in'), sb = $('#ch-send'), c = $('#ch-cnt'); if (!ta) return;
+  ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  sb.disabled = !ta.value.trim();
+  const left = MAXLEN - ta.value.length; c.textContent = left <= 60 ? String(left) : '';
+}
+function chPost(m) { m.t0 = now(); post({ type: 'chat_send', room: m.room, text: m.x, cmid: m.k }).catch(() => {}); }
+function chSend() {
+  const ta = $('#ch-in'); if (!ta || !url()) return;
+  const x = ta.value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAXLEN);
+  if (!x) return;
+  if (now() - csent < 1200) { say('Slow down a little'); return; }
+  csent = clast = now();
+  const m = { k: uid(), room: cs.room, x, t0: csent, st: 'sending' };
+  outbox.push(m); ta.value = ''; chInput(); chPost(m); csel = ''; chRender(true);
+  setTimeout(chPoll, 1800); setTimeout(chPoll, 4200); setTimeout(chExpire, 31000); chLoop();
+}
+function chRetry(m) {
+  m.st = 'sending'; (m.blob ? chPostImg : chPost)(m); csel = ''; chRender(true);
+  setTimeout(chPoll, m.blob ? 4000 : 2000); setTimeout(chExpire, m.blob ? 76000 : 31000);
+}
+function chExpire() {                                            // never came back from the server → let the student retry (photos get longer)
+  let c = false;
+  outbox.forEach(o => { if (o.st === 'sending' && now() - o.t0 > (o.blob ? 75000 : 30000)) { o.st = 'failed'; c = true; } });
+  if (c && chatVisible()) chRender(false);
+}
+
+/* ----- photos -----
+   The photo is shrunk on the phone (longest side 1024 px, JPEG, about 100–300 KB) so it fits an Apps Script request,
+   sent as base64, saved in Google Drive by Media.gs, and only its link is stored in the sheet. */
+const IMG_SIDE = 1024, IMG_QUAL = [0.72, 0.6, 0.5, 0.4], IMG_GOAL = 280 * 1024, IMG_HARD = 450 * 1024;   // longest side · JPEG quality steps · target size · hard limit
+const IMG_ERR = { fast: 'Slow down a little', rate: 'Too many messages — wait a minute', banned: "You can't send messages", room: "You can't write in this room",
+  big: 'Photo is too large', limit: 'Photo limit reached. Try again later', upload: 'Photo upload failed. Try again', busy: 'Server is busy. Try again' };
+const cleanTxt = s => s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAXLEN);
+const jpg = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+const toB64 = blob => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(blob); });
+function loadImg(f) {
+  return new Promise((ok, no) => {
+    const u = URL.createObjectURL(f), i = new Image();
+    i.onload = () => { URL.revokeObjectURL(u); ok(i); };
+    i.onerror = () => { URL.revokeObjectURL(u); no(new Error('unreadable')); };
+    i.src = u;
+  });
+}
+async function shrink(file) {                                    // resize + re-encode as JPEG (this also removes EXIF / GPS data)
+  const img = await loadImg(file), W = img.naturalWidth, H = img.naturalHeight;
+  if (!W || !H) throw new Error('empty');
+  let k = Math.min(1, IMG_SIDE / Math.max(W, H)), blob = null;
+  for (let round = 0; round < 3; round++, k *= 0.75) {
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);   // white behind transparent PNGs
+    for (const q of IMG_QUAL) { blob = await jpg(c, q); if (blob && blob.size <= IMG_GOAL) return { blob }; }
+  }
+  if (blob && blob.size <= IMG_HARD) return { blob };
+  throw new Error('too big');
+}
+async function chPick(e) {
+  const f = e.target.files && e.target.files[0]; e.target.value = '';      // reset, so the same photo can be picked again
+  if (!f || !url()) return;
+  if (!/^image\//.test(f.type)) { say('Please choose a photo'); return; }
+  if (now() - csent < 4000) { say('Slow down a little'); return; }
+  const room = cs.room, clip = $('#ch-clip'); let p;
+  if (clip) clip.disabled = true;
+  try { p = await shrink(f); } catch (err) { if (clip) clip.disabled = false; say("Couldn't use that photo"); return; }
+  if (clip) clip.disabled = false;
+  const ta = $('#ch-in'), caption = cleanTxt(ta.value);                    // whatever is typed in the box becomes the caption
+  csent = clast = now();
+  const m = { k: uid(), room, x: caption, t0: csent, st: 'sending', blob: p.blob, prev: URL.createObjectURL(p.blob) };
+  ta.value = ''; chInput(); outbox.push(m); csel = ''; chRender(true); chPostImg(m);
+  setTimeout(chPoll, 3000); setTimeout(chPoll, 7000); setTimeout(chExpire, 76000); chLoop();
+}
+async function chPostImg(m) {
+  m.t0 = now();
+  try {
+    const r = await post({ type: 'chat_send', room: m.room, text: m.x, cmid: m.k, img: await toB64(m.blob) }, true);
+    const j = await r.json().catch(() => null);
+    if (j && j.ok === false && m.st === 'sending') { m.st = 'failed'; say(j.msg || IMG_ERR[j.error] || "Photo couldn't be sent"); if (chatVisible()) chRender(false); }
+  } catch (e) { /* no readable answer is fine: the poll shows whether it arrived, and chExpire marks it failed if not */ }
+}
+function chImg(x) {                                              // one <img> per message, re-attached on every render (so nothing flickers)
+  const src = x.p || x.i, id = x.k || x.key;
+  let im = imgEls[id];
+  if (!im) {
+    if (Object.keys(imgEls).length > 80) for (const k in imgEls) delete imgEls[k];
+    im = imgEls[id] = el('img', 'ch-img'); im.alt = 'Photo'; im.decoding = 'async'; im.draggable = false; im.referrerPolicy = 'no-referrer';
+    im.onload = () => { if (chPin) { const l = $('#ch-list'); if (l) l.scrollTop = l.scrollHeight; } };   // keep the chat at the bottom when a photo finishes loading
+    im.onerror = () => {
+      if (!im.dataset.r && !/^blob:/.test(im.dataset.s)) { im.dataset.r = '1'; setTimeout(() => { im.src = im.dataset.s + '&r=1'; }, 2500); }   // Drive can need a moment
+      else im.classList.add('bad');
+    };
+  }
+  if (im.dataset.s !== src) { im.dataset.s = src; im.src = src; }
+  im.onclick = e => { e.stopPropagation(); chView(x); };
+  return im;
+}
+function chView(x) {                                             // full-screen viewer (tap anywhere to close)
+  const o = el('div', 'ch-lb'), im = el('img'), bar = el('div', 'ch-lbar'), close = el('button', '', 'Close');
+  im.src = x.p || x.i; close.type = 'button'; bar.append(close);
+  if (!x.mine && x.st === 'ok') {
+    const rp = el('button', 'rd', 'Report'); rp.type = 'button';
+    rp.onclick = e => { e.stopPropagation(); o.remove(); chReport(x); }; bar.append(rp);
+  }
+  o.onclick = () => o.remove(); o.append(im, bar);
+  ($('#app') || document.body).append(o);
+}
+
+/* ----- receiving ----- */
+function chMerge(room, arr) {
+  const b = bx(room); let added = 0, others = 0;
+  arr.forEach(m => {
+    if (b.msgs.some(x => x.t === m.t)) return;
+    b.msgs.push(m); added++; if (m.u !== myUid) others++;
+    const i = outbox.findIndex(o => o.k === m.k);                // my message came back → delivered
+    if (i >= 0) { if (outbox[i].prev) localImg[m.k] = outbox[i].prev; outbox.splice(i, 1); }   // a photo keeps my local preview, so it doesn't flash
+  });
+  if (added) {
+    b.msgs.sort((a, c) => a.t - c.t);
+    if (b.msgs.length > 200) b.msgs.splice(0, b.msgs.length - 200);
+    b.last = b.msgs[b.msgs.length - 1].t; clast = now();
+  }
+  return { added, others };
+}
+function chPrune(room, ids, serverNow) {                         // a message you hid / deleted in the sheet must disappear from the chat too
+  if (!Array.isArray(ids)) return false;                         // (an older server doesn't send the list)
+  const b = bx(room), keep = new Set(ids), cut = (serverNow || now()) - 15000;   // a message younger than 15 s is never dropped (it may still be on its way to the cache)
+  const gone = m => !keep.has(m.t) && m.t <= cut && (!ids.length || m.t >= ids[0]);   // only the part of the room the server still lists can be checked
+  const n = b.msgs.length;
+  b.msgs = b.msgs.filter(m => !gone(m));
+  if (b.msgs.length === n) return false;
+  csel = ''; return true;
+}
+async function chPoll() {
+  if (cpolling || !url() || !cs.ok || !chatVisible() || document.hidden) return;
+  cpolling = true;
+  const room = cs.room, b = bx(room), first = !b.loaded, ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const r = await fetch(`${url()}?action=chat&room=${encodeURIComponent(room)}&since=${b.last}&id=${encodeURIComponent(cid())}&_=${now()}`, { signal: ctl.signal });
+    const d = await r.json();
+    if (!d || !d.ok) throw new Error((d && d.error) || 'bad response');
+    cfail = 0; if (d.you) myUid = d.you;
+    const res = chMerge(room, d.msgs || []); b.loaded = true;
+    const gone = chPrune(room, d.ids, d.now);
+    chExpire();
+    if (room === cs.room && (res.added || gone || first)) {
+      const l = $('#ch-list');
+      if (res.others && l && l.scrollHeight - l.scrollTop - l.clientHeight >= 90) cnew += res.others;   // you are reading older messages → show the "new" button
+      chRender(first);
+    }
+  } catch (e) { cfail++; console.warn('Study chat: poll failed —', e); }
+  clearTimeout(t); cpolling = false; chHeader();
+}
+const chDelay = () => {                                          // fast while something is happening, slower when the room is quiet
+  const idle = now() - clast;
+  return (idle < 60000 ? 4000 : idle < 300000 ? 8000 : 15000) * Math.min(4, 1 + cfail);
+};
+function chLoop(fast) {
+  clearTimeout(ctm);
+  ctm = setTimeout(async () => {
+    if (!chatVisible() || document.hidden || !cs.ok) return;       // stops by itself; it starts again when the chat is opened
+    await chPoll(); chLoop();
+  }, fast ? 0 : chDelay());
+}
+function chOpen() {
+  $('#ch-rules').hidden = cs.ok; $('#ch-main').hidden = !cs.ok;
+  if (!cs.ok) return;
+  clast = now(); chRooms(); chHeader(); chRender(true); chLoop(true);
+  setTimeout(() => { if (chatVisible()) chRender(true); }, 0);   // the page may only become visible a moment after this call
+}
+
+/* ----- look (injected here, so no CSS file has to change) -----
+   The photo styles (.ch-clip, .ch-img, .ch-lb …) are in style.css */
+const CHAT_CSS = `
+#study .st-tabs{display:grid;grid-template-columns:repeat(3,1fr)}
+#st-chat{display:flex;flex-direction:column;margin-top:10px;min-height:300px;
+  height:calc(100dvh - 156px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--kb,0px))}
+#ch-main{flex:1;min-height:0;display:flex;flex-direction:column}
+.ch-rooms{flex:none;display:flex;gap:6px;overflow-x:auto;padding-bottom:8px}
+.ch-rooms button{flex:none;padding:7px 15px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--mu);font-size:14px;font-weight:600}
+.ch-rooms button.on{background:var(--coral);border-color:var(--coral);color:#fff}
+.ch-meta{flex:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 4px 8px;font-size:12.5px;color:var(--mu)}
+.ch-st::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#18b26b;vertical-align:1px}
+.ch-st.off::before{background:var(--coral)}
+.ch-un{color:var(--mu);font-size:12.5px;text-decoration:underline}
+.ch-wrap{position:relative;flex:1;min-height:0;display:flex}
+.ch-list{flex:1;min-width:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;padding:10px 8px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--s1)}
+.ch-list>:first-child{margin-top:auto}
+.ch-empty{margin:auto;padding:20px;text-align:center;color:var(--mu);font-size:14.5px;white-space:pre-line}
+.ch-day{align-self:center;margin:12px 0 4px;padding:3px 12px;border-radius:999px;background:var(--s2);color:var(--mu);font-size:12px;font-weight:600}
+.ch-r{display:flex;align-items:flex-start;gap:8px;margin-top:9px}
+.ch-r.cont{margin-top:2px}
+.ch-r.mine{flex-direction:row-reverse}
+.ch-av{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:700;background:hsl(var(--h,0) 42% 36%)}
+.ch-av.sp{visibility:hidden}
+.ch-bw{display:grid;gap:5px;min-width:0;max-width:80%;justify-items:start}
+.ch-r.mine .ch-bw{justify-items:end}
+.ch-b{min-width:0;max-width:100%;padding:7px 11px 5px;border-radius:5px 16px 16px 16px;background:var(--s2);color:var(--tx);cursor:pointer;transition:transform .1s}
+.ch-b:active{transform:scale(.985)}
+.ch-r.cont:not(.mine) .ch-b{border-radius:5px 16px 16px 5px}
+.ch-r.mine .ch-b{border-radius:16px 5px 16px 16px;background:var(--coral);color:#fff}
+.ch-r.mine.cont .ch-b{border-radius:16px 5px 5px 16px}
+.ch-r.pend .ch-b{opacity:.6}
+.ch-r.fail .ch-b{background:color-mix(in srgb,var(--coral) 40%,var(--s2));box-shadow:inset 0 0 0 1.5px var(--coral)}
+.ch-h{display:flex;align-items:baseline;gap:7px;margin-bottom:2px}
+.ch-h b{display:block;font-size:13px;color:var(--coral)}
+.ch-h small{color:var(--mu);font-size:11px}
+.ch-x{font-size:15px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;text-align:start}
+.ch-t{display:flex;justify-content:flex-end;gap:5px;margin-top:2px;font-size:10.5px;opacity:.65}
+.ch-acts{display:flex;flex-wrap:wrap;gap:6px}
+.ch-acts button{padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font-size:12.5px;font-weight:600}
+.ch-acts .rd{color:var(--coral)}
+.ch-new{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:7px 15px;border-radius:999px;background:var(--coral);color:#fff;font-size:13px;font-weight:700;box-shadow:0 6px 18px rgba(229,32,46,.45)}
+.ch-bar{flex:none;display:flex;align-items:flex-end;gap:8px;margin-top:10px}
+.ch-bar textarea{flex:1;min-width:0;max-height:120px;resize:none;padding:11px 15px;border-radius:22px;border:1.5px solid var(--line);background:var(--s1);color:var(--tx);font:inherit;font-size:16px;line-height:1.3}
+.ch-bar textarea:focus{outline:none;border-color:var(--coral)}
+.ch-send{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--coral);color:#fff;box-shadow:0 6px 16px rgba(229,32,46,.35)}
+.ch-send:disabled{opacity:.35;box-shadow:none}
+.ch-cnt{flex:none;text-align:right;padding:2px 8px 0;font-size:11.5px;color:var(--mu)}.ch-cnt:empty{display:none}
+.ch-rules{margin:auto 0;display:grid;justify-items:center;gap:10px;text-align:center;padding:24px 18px;border:1px solid var(--line);border-radius:var(--r);background:var(--s1)}
+.ch-rules .ic{width:52px;height:52px;border-radius:16px}
+.ch-rules h3{font-size:21px}
+.ch-rules p{color:var(--mu);font-size:14.5px}
+.ch-rules ul{list-style:none;display:grid;gap:9px;padding:0;text-align:left;color:var(--mu);font-size:14.5px;line-height:1.4}
+.ch-rules li{display:flex;gap:10px}.ch-rules li::before{content:"•";color:var(--coral);font-weight:700}
+`;
+function injectCss() {
+  if (document.getElementById('st-chat-css')) return;
+  const s = document.createElement('style'); s.id = 'st-chat-css'; s.textContent = CHAT_CSS; document.head.append(s);
+}
+
 function setTab(t) {
   tab = t;
-  $('#st-room').hidden = t !== 'room'; $('#st-board').hidden = t !== 'board';
+  $('#st-room').hidden = t !== 'room'; $('#st-board').hidden = t !== 'board'; $('#st-chat').hidden = t !== 'chat';
   document.querySelectorAll('#study .st-tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   if (t === 'board') { paintBoard(); if (now() - lbAt > 20000) loadBoard(); }
+  if (t === 'chat') chOpen();
 }
 
 /* ---------- build the page (injected, so index.html only needs the tile) ---------- */
@@ -389,6 +764,7 @@ function build() {
     <div class="st-tabs" role="tablist">
       <button type="button" data-t="room" class="on" role="tab">Focus room</button>
       <button type="button" data-t="board" role="tab">Leaderboard</button>
+      <button type="button" data-t="chat" role="tab">Chat</button>
     </div>
 
     <div id="st-room">
@@ -430,8 +806,39 @@ function build() {
       </div>
       <div id="lb-list" class="list"></div>
       <div id="lb-me"></div>
+    </div>
+
+    <div id="st-chat" hidden>
+      <div id="ch-rules" class="ch-rules" hidden>
+        <span id="ch-ic" class="ic"></span>
+        <h3>Study chat</h3>
+        <p>A place to ask questions and study together. Before you join:</p>
+        <ul>
+          <li>Be respectful. No insults, harassment, spam or ads.</li>
+          <li>Never share passwords, phone numbers or other private details.</li>
+          <li>Other students see your first name, group and section. Turn off “Show my name” in Room settings to appear as Anonymous.</li>
+          <li>Any message can be reported. Admins can remove messages and block people.</li>
+        </ul>
+        <button id="ch-agree" type="button" class="cta">I agree</button>
+      </div>
+      <div id="ch-main" hidden>
+        <div id="ch-rooms" class="ch-rooms"></div>
+        <div class="ch-meta"><span id="ch-st" class="ch-st">Connecting…</span><button id="ch-un" type="button" class="ch-un" hidden></button></div>
+        <div class="ch-wrap">
+          <div id="ch-list" class="ch-list"></div>
+          <button id="ch-new" type="button" class="ch-new" hidden></button>
+        </div>
+        <div class="ch-bar">
+          <textarea id="ch-in" rows="1" maxlength="400" dir="auto" enterkeyhint="send" aria-label="Message"></textarea>
+          <button id="ch-send" type="button" class="ch-send" aria-label="Send" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        </div>
+        <small id="ch-cnt" class="ch-cnt"></small>
+      </div>
     </div>`;
+  injectCss();
   main.append(sec);
+  const tc = document.getElementById('t-chclip');                  // the photo button + file picker live in index.html (<template id="t-chclip">)
+  if (tc) sec.querySelector('.ch-bar').prepend(tc.content.cloneNode(true));
 
   const set = $('#st-set');
   set.append(toggleRow('bell', 'Sound', 'A chime when a session ends', 'st-snd'), toggleRow('user', 'Show my name', 'On the leaderboard (first name only)', 'st-anon'));
@@ -446,6 +853,25 @@ function build() {
   $('#st-alt').onclick = cancelRun;
   $('#st-sel').onchange = e => { st.subj = e.target.value; persist(); };
   $('#lb-ref').onclick = loadBoard;
+
+  $('#ch-ic').innerHTML = ic('others');
+  $('#ch-agree').onclick = () => { cs.ok = true; cpersist(); chOpen(); };
+  $('#ch-un').onclick = () => { cs.muted = []; cpersist(); chHeader(); chRender(false); };
+  $('#ch-new').onclick = () => { const l = $('#ch-list'); cnew = 0; chNewPill(); l.scrollTo({ top: l.scrollHeight, behavior: 'smooth' }); };
+  $('#ch-list').addEventListener('scroll', e => {
+    const l = e.target, near = l.scrollHeight - l.scrollTop - l.clientHeight < 90;
+    chPin = near; if (cnew && near) { cnew = 0; chNewPill(); }
+  });
+  $('#ch-in').oninput = chInput;
+  $('#ch-in').onkeydown = e => {                                   // computer: Enter sends, Shift+Enter = new line. Phone: Enter = new line, use the arrow
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && matchMedia('(pointer:fine)').matches) { e.preventDefault(); chSend(); }
+  };
+  $('#ch-send').onclick = chSend;
+  $('#ch-send').addEventListener('pointerdown', e => e.preventDefault());   // keep the keyboard open when you tap send
+  if ($('#ch-clip') && $('#ch-file')) {                            // photo button (from the template in index.html)
+    $('#ch-clip').onclick = () => $('#ch-file').click();
+    $('#ch-file').onchange = chPick;
+  }
 
   const pill = el('button', 'st-pill'); pill.id = 'st-pill'; pill.type = 'button'; pill.hidden = true; pill.setAttribute('aria-label', 'Open Study Rooms');
   pill.innerHTML = '<span class="dot"></span><b></b><small></small>';
@@ -477,6 +903,12 @@ window.Study = { open, tile };
 
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); flush(); } });
 addEventListener('online', flush);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && chatVisible()) chLoop(true); });
+if (window.visualViewport) visualViewport.addEventListener('resize', () => {     // phone keyboard: shrink the chat so the message box stays visible
+  const kb = Math.max(0, innerHeight - visualViewport.height - visualViewport.offsetTop);
+  document.documentElement.style.setProperty('--kb', kb + 'px');
+  if (chatVisible()) { const l = $('#ch-list'); if (l) l.scrollTop = l.scrollHeight; }
+});
 setInterval(() => { if (visible() && tab === 'board' && !document.hidden) loadBoard(); }, 60000);
 if (document.readyState === 'complete') init(); else addEventListener('load', init);
 })();
