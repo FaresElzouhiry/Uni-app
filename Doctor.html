@@ -138,9 +138,9 @@ dialog::backdrop{background:#000d}
 <script>
 /* ============ Settings ============ */
 const API='https://script.google.com/macros/s/AKfycbxDPsehWjjW9CBbc9GDijsPSOJ8g4ZjehgT0sA4k1aJ7jrQayWoY_wZptu-J4xcJB_J/exec';
-const LOC_URL='';              // full URL of set-location.html. Leave empty to derive it from SCAN_URL (or the same folder as this page).
+const LOC_URL='https://test.juster-5zq.pages.dev/set-location.html';              // full URL of set-location.html. Leave empty to derive it from SCAN_URL (or the same folder as this page).
 const BEACON_POLL_MS=3000;     // how often the laptop checks whether the phone has set the location
-const SCAN_URL='';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
+const SCAN_URL='https://test.juster-5zq.pages.dev/scan.html';             // full URL of scan.html, e.g. 'https://yoursite.com/scan.html'. Leave empty if scan.html is in the same folder as this page.
 const REFRESH_MS=5000;         // live feed polling interval
 
 /* ============ Helpers ============ */
@@ -209,7 +209,7 @@ function openSession(s){
   SES=s;localStorage.setItem('tsid',s.id);seen=new Set();firstFeed=true;
   $('#setup').hidden=true;$('#live').hidden=false;
   $('#liveTitle').textContent=`${s.subject} - Group ${s.group}`;
-  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m${s.docAcc!=null?` (classroom fix accurate to ${s.docAcc} m)`:''}`:'Location check: off');
+  $('#liveSub').textContent='Started '+new Date(s.started).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' - '+(s.geo?`Location check: within ${s.radius} m`:'Location check: off');
   $('#cnt').textContent='0';$('#nTotal').textContent='-';$('#nAbs').textContent='-';$('#absL').replaceChildren();
   $('#feed').replaceChildren(el('p','empty','Waiting for students...'));
   const w=$('#actWrap');w.hidden=active.length<2;
