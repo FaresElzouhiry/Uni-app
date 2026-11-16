@@ -685,7 +685,7 @@ function chOpen() {
 /* ----- look (injected here, so no CSS file has to change) -----
    The photo styles (.ch-clip, .ch-img, .ch-lb …) are in style.css */
 const CHAT_CSS = `
-#study .st-tabs{display:grid;grid-template-columns:repeat(3,1fr)}
+#study .st-tabs{display:grid;grid-template-columns:repeat(2,1fr)}  /* was repeat(3,1fr) with the Chat tab — set back to 3 when Chat returns */
 #st-chat{display:flex;flex-direction:column;margin-top:10px;min-height:300px;
   height:calc(100dvh - 156px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--kb,0px))}
 #ch-main{flex:1;min-height:0;display:flex;flex-direction:column}
@@ -764,7 +764,8 @@ function build() {
     <div class="st-tabs" role="tablist">
       <button type="button" data-t="room" class="on" role="tab">Focus room</button>
       <button type="button" data-t="board" role="tab">Leaderboard</button>
-      <button type="button" data-t="chat" role="tab">Chat</button>
+      <!-- Chat hidden for now: put this button back to show the Chat tab again -->
+      <!-- <button type="button" data-t="chat" role="tab">Chat</button> -->
     </div>
 
     <div id="st-room">
